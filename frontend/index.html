@@ -598,22 +598,6 @@
             })
 
             document.addEventListener('keydown', function(e) {
-                // F11 全屏
-                if (e.key === 'F11') {
-                    e.preventDefault()
-                    if (window.wails && window.wails.CallByName) {
-                        window.wails.CallByName('main.App.ToggleFullscreen').catch(function(err) {
-                            console.error('[frontend] ToggleFullscreen failed:', err)
-                        })
-                    }
-                    // Tauri: Toggle fullscreen via invoke
-                    if (window.__TAURI__) {
-                        window.__TAURI__.core.invoke('toggle_fullscreen').catch(function(err) {
-                            console.error('[frontend] ToggleFullscreen failed:', err)
-                        })
-                    }
-                }
-
                 // Cmd/Ctrl + Shift + F 全屏
                 if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
                     e.preventDefault()
