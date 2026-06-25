@@ -600,6 +600,12 @@
                             console.error('[frontend] ToggleFullscreen failed:', err)
                         })
                     }
+                    // Tauri: Toggle fullscreen via invoke
+                    if (window.__TAURI__) {
+                        window.__TAURI__.core.invoke('toggle_fullscreen').catch(function(err) {
+                            console.error('[frontend] ToggleFullscreen failed:', err)
+                        })
+                    }
                 }
                 // 禁止 Cmd+W 关闭窗口
                 if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
@@ -607,6 +613,22 @@
                     return false
                 }
             })
+
+            // Tauri menu event listeners
+            function setupTauriListeners() {
+                if (window.__TAURI__ && window.__TAURI__.event) {
+                    window.__TAURI__.event.listen('open-settings', function() {
+                        openSettings()
+                    })
+                    window.__TAURI__.event.listen('show-about', function() {
+                        alert('翻转时钟 v1.0.0\n\n一个简洁优雅的翻页时钟应用')
+                    })
+                    window.__TAURI__.event.listen('check-updates', function() {
+                        alert('检查更新功能即将上线')
+                    })
+                }
+            }
+            setupTauriListeners()
         </script>
     </body>
 </html>

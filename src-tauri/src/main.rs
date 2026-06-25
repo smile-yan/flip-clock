@@ -2,10 +2,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
+mod menu;
 
 use config::{available_styles, available_themes, available_time_formats, load, save};
+use menu::create_app_menu;
 use std::collections::HashMap;
-use tauri::Manager;
+use tauri::{menu::MenuEvent, Emitter, Manager, Runtime};
 
 #[tauri::command]
 fn get_config() -> Result<HashMap<String, serde_json::Value>, String> {
@@ -147,6 +149,60 @@ fn get_available_time_formats() -> Vec<String> {
         .collect()
 }
 
+/// Handle menu events from the native menu bar
+fn handle_menu_event<R: Runtime>(app: &tauri::AppHandle<R>, event: MenuEvent) {
+    let id = event.id().as_ref();
+    log::info!("Menu event: {}", id);
+
+    match id {
+        "about" => {
+            // Show about dialog via eval
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.eval("alert('翻转时钟 v1.0.0\\n\\n一个简洁优雅的翻页时钟应用\\n\\nhttps://github.com/smile-yan/easy-flip-clock')");
+            }
+        }
+        "settings" => {
+            // Call openSettings directly via eval
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.eval("if (typeof openSettings === 'function') { openSettings(); } else { console.error('openSettings not found'); }");
+            }
+        }
+        "check_updates" => {
+            // Show update dialog via eval
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.eval("alert('检查更新功能即将上线')");
+            }
+        }
+        "quit" => {
+            // Save config before quitting
+            if let Ok(cfg) = load() {
+                if let Err(e) = save(&cfg) {
+                    log::error!("Failed to save config on quit: {}", e);
+                }
+            }
+            app.exit(0);
+        }
+        "fullscreen" => {
+            // Toggle fullscreen
+            if let Some(window) = app.get_webview_window("main") {
+                match window.is_fullscreen() {
+                    Ok(true) => {
+                        let _ = window.set_fullscreen(false);
+                        log::info!("Exited fullscreen via menu");
+                    }
+                    Ok(false) => {
+                        let _ = window.set_fullscreen(true);
+                        log::info!("Entered fullscreen via menu");
+                    }
+                    Err(e) => log::error!("Failed to get fullscreen state: {}", e),
+                }
+            }
+        }
+        // PredefinedMenuItem IDs (minimize, zoom) are handled by the system
+        _ => {}
+    }
+}
+
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
@@ -165,6 +221,16 @@ fn main() {
         .setup(|app| {
             log::info!("App setup complete");
 
+            // Create and set the application menu
+            let app_menu = create_app_menu(app.handle())?;
+            app.set_menu(app_menu)?;
+
+            // Handle menu events
+            app.on_menu_event(|app, event| {
+                handle_menu_event(app, event);
+            });
+
+            
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {
                 window.on_window_event(move |event| {

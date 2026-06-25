@@ -8,6 +8,9 @@
     "core:window:default",
     "core:window:allow-is-fullscreen",
     "core:window:allow-set-fullscreen",
-    "shell:allow-open"
+    "core:window:allow-minimize",
+    "core:event:default",
+    "shell:allow-open",
+    "core:menu:default"
   ]
 }
