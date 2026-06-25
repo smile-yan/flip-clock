@@ -598,8 +598,8 @@
             })
 
             document.addEventListener('keydown', function(e) {
-                // Cmd/Ctrl + Shift + F 全屏
-                if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+                // Cmd/Ctrl + F 全屏
+                if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
                     e.preventDefault()
                     if (window.__TAURI__) {
                         window.__TAURI__.core.invoke('toggle_fullscreen').catch(function(err) {
