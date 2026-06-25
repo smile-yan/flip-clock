@@ -10,8 +10,8 @@
     "windows": [
       {
         "title": "翻转时钟",
-        "width": 600,
-        "height": 300,
+        "width": 960,
+        "height": 540,
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
