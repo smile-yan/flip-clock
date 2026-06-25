@@ -598,16 +598,6 @@
             })
 
             document.addEventListener('keydown', function(e) {
-                // Cmd/Ctrl + F 全屏
-                if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
-                    e.preventDefault()
-                    if (window.__TAURI__) {
-                        window.__TAURI__.core.invoke('toggle_fullscreen').catch(function(err) {
-                            console.error('[frontend] ToggleFullscreen failed:', err)
-                        })
-                    }
-                }
-
                 // 禁止 Cmd/Ctrl + W 关闭窗口
                 if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'w') {
                     e.preventDefault()

@@ -241,10 +241,9 @@ fn main() {
                         let screen_width = monitor.size().width as f64;
                         let screen_height = monitor.size().height as f64;
                         let scale_factor = win.scale_factor().unwrap_or(1.0);
-                        // 使用 LogicalSize 直接设置逻辑像素（屏幕一半）
                         let half_width = screen_width / scale_factor / 2.0;
                         let half_height = screen_height / scale_factor / 2.0;
-                        log::info!("[WINDOW] Screen: {}x{} (physical), scale: {}, setting window to: {}x{} (logical)",
+                        log::info!("[WINDOW] Screen: {}x{}, scale: {}, window: {}x{}",
                             screen_width, screen_height, scale_factor, half_width, half_height);
                         let _ = win.set_size(tauri::Size::Logical(
                             tauri::LogicalSize { width: half_width, height: half_height }
