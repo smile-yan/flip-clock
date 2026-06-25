@@ -1,0 +1,69 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="../css/flipclock.css">
+		<link rel="stylesheet" href="../css/styles.css">
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+        <script src="../js/flipclock.min.js"></script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="weekday" id="dateDisplay">hello world</div>
+            <div class="clock"></div>
+            <div class="motto" id="mottoDisplay">君子三思而后行</div>
+        </div>
+    
+
+        <script type="text/javascript">
+            var clock;
+
+            $(document).ready(function() {
+                clock = $('.clock').FlipClock({
+                    clockFace: 'TwentyFourHourClock',
+                });
+            });
+            const width = 600
+            const height = 300
+            // 自动调整缩放比例
+            function resize() {
+                const container = document.querySelector('.container')
+                const scaleX = window.innerWidth / width
+                const scaleY = window.innerHeight / height
+                let scale;
+                if (window.innerHeight / window.innerWidth > 0.3) {
+                    // 当 height / width > 0.5，仅按照宽度缩放
+                    scale = scaleX
+                } else {
+                    // 否则正常等比例缩放
+                    scale = Math.min(scaleX, scaleY)
+                }
+
+                container.style.transform = `scale(${scale})`
+            }
+
+            function getFormattedDate() {
+                const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                const now = new Date();
+
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始
+                const date = String(now.getDate()).padStart(2, '0');
+                const day = days[now.getDay()];
+
+                return `${year}-${month}-${date} ${day}`;
+            }
+
+            // 设置日期
+            document.getElementById('dateDisplay').innerText = getFormattedDate();
+
+            let resizeTimeout;
+
+            function debounceResize() {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(resize, 100); // 延迟100ms
+            }
+
+            window.addEventListener('resize', debounceResize);
+            resize(); // 初始调用
+        </script>
+    </body>
+</html>

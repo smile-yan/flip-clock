@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <title>翻转时钟</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        <link rel="stylesheet" href="css/flipclock.css">
+		<link rel="stylesheet" href="css/styles.css">
+        <script src="js/jquery.min.js"></script>
+        <script src="js/flipclock.min.js"></script>
+    </head>
+    <body>
+        <div class="container">
+            <div class="date-bar">
+                <span class="weekday" id="dateDisplay">hello world</span>
+                <span class="lunar" id="lunarDisplay"></span>
+            </div>
+            <div class="clock" id="clock"></div>
+            <div class="motto" id="mottoDisplay">君子三思而后行</div>
+        </div>
+
+        <!-- 设置弹窗遮罩 -->
+        <div class="settings-overlay" id="settingsOverlay"></div>
+
+        <!-- 设置弹窗 -->
+        <div class="settings-modal" id="settingsModal" role="dialog" aria-labelledby="settingsTitle">
+            <div class="window-chrome">
+                <span class="dot red close-btn" id="closeBtn" role="button" aria-label="关闭" title="关闭"></span>
+                <span class="window-title" id="settingsTitle">设置</span>
+            </div>
+
+            <!-- 样式 -->
+            <section class="settings-section">
+                <span class="section-label">样式：</span>
+                <div class="style-options" id="styleOptions">
+                    <label class="style-option" data-style="without-seconds">
+                        <input type="radio" name="style" value="without-seconds">
+                        <div class="preview preview-minimal">
+                            <div class="preview-am-pm">PM</div>
+                            <div class="preview-row">
+                                <div class="preview-card"><span>03</span></div>
+                                <div class="preview-card"><span>35</span></div>
+                            </div>
+                        </div>
+                    </label>
+                    <label class="style-option" data-style="with-seconds">
+                        <input type="radio" name="style" value="with-seconds">
+                        <div class="preview preview-full">
+                            <div class="preview-row">
+                                <div class="preview-card"><span>03</span></div>
+                                <div class="preview-card"><span>34</span></div>
+                                <div class="preview-card"><span>18</span></div>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </section>
+
+            <!-- 时间格式 -->
+            <section class="settings-section">
+                <span class="section-label">时间格式：</span>
+                <div class="select-wrapper">
+                    <select id="timeFormatSelect" class="settings-select">
+                        <option value="24h">24 小时</option>
+                        <option value="12h">12 小时</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- 主题 -->
+            <section class="settings-section">
+                <span class="section-label">主题：</span>
+                <div class="select-wrapper">
+                    <select id="themeSelect" class="settings-select">
+                        <option value="dark">深色</option>
+                        <option value="light">浅色</option>
+                        <option value="sepia">米色</option>
+                        <option value="blue">蓝色</option>
+                        <option value="forest">森林</option>
+                        <option value="sunset">日落</option>
+                        <option value="midnight">深夜</option>
+                        <option value="ocean">海洋</option>
+                        <option value="rose">玫瑰</option>
+                        <option value="slate">石板</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- 显示 -->
+            <section class="settings-section">
+                <span class="section-label">显示：</span>
+                <div class="checkbox-grid">
+                    <label class="check-line">
+                        <input type="checkbox" id="showDateCheck">
+                        <span class="check-box"></span>
+                        <span class="check-text">日期</span>
+                    </label>
+                    <label class="check-line">
+                        <input type="checkbox" id="showLunarCheck">
+                        <span class="check-box"></span>
+                        <span class="check-text">农历</span>
+                    </label>
+                    <label class="check-line">
+                        <input type="checkbox" id="showMottoCheck">
+                        <span class="check-box"></span>
+                        <span class="check-text">座右铭</span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- 座右铭输入 -->
+            <section class="settings-section motto-input-section">
+                <input type="text" id="mottoInput" class="settings-text-input" maxlength="200"
+                    placeholder="输入完成后，单击空白空间以确认。">
+            </section>
+        </div>
+
+        <script type="text/javascript">
+            var clock
+            const width = 600
+            const height = 300
+
+            // === 默认配置 ===
+            const DEFAULT_CONFIG = {
+                motto: '君子三思而后行',
+                theme: 'dark',
+                style: 'with-seconds',
+                time_format: '24h',
+                show_date: true,
+                show_seconds: true,
+                show_lunar: false,
+                show_motto: true,
+                color: ''
+            }
+
+            let currentConfig = Object.assign({}, DEFAULT_CONFIG)
+            let saveTimer = null
+
+            function getValueByPath(obj, path) {
+                return obj && obj[path] !== undefined ? obj[path] : DEFAULT_CONFIG[path]
+            }
+
+            function setCheckbox(id, value) {
+                const el = document.getElementById(id)
+                if (el) el.checked = !!value
+            }
+
+            function setRadio(name, value) {
+                document.querySelectorAll('input[type="radio"][name="' + name + '"]').forEach(function (r) {
+                    r.checked = (r.value === value)
+                })
+            }
+
+            function setSelect(id, value) {
+                const el = document.getElementById(id)
+                if (el) el.value = value
+            }
+
+            function setText(id, value) {
+                const el = document.getElementById(id)
+                if (el) el.value = value == null ? '' : value
+            }
+
+            // === 弹窗控制 ===
+            const overlay = document.getElementById('settingsOverlay')
+            const modal = document.getElementById('settingsModal')
+
+            function openSettings() {
+                // 把当前配置回填到表单
+                setRadio('style', currentConfig.style)
+                setSelect('timeFormatSelect', currentConfig.time_format)
+                setSelect('themeSelect', currentConfig.theme)
+                setCheckbox('showDateCheck', currentConfig.show_date)
+                setCheckbox('showLunarCheck', currentConfig.show_lunar)
+                setCheckbox('showMottoCheck', currentConfig.show_motto)
+                setText('mottoInput', currentConfig.motto)
+
+                overlay.classList.add('visible')
+                modal.classList.add('visible')
+            }
+
+            function closeSettings() {
+                overlay.classList.remove('visible')
+                modal.classList.remove('visible')
+                // 立即提交未保存的座右铭
+                flushSave(true)
+            }
+
+            function scheduleSave() {
+                if (saveTimer) clearTimeout(saveTimer)
+                saveTimer = setTimeout(function () { flushSave(false) }, 300)
+            }
+
+            function flushSave(immediate) {
+                if (saveTimer) {
+                    clearTimeout(saveTimer)
+                    saveTimer = null
+                }
+                persistConfig(immediate)
+            }
+
+            function persistConfig(immediate) {
+                console.log('[frontend] persistConfig called, immediate=' + immediate)
+                if (!window.wails || !window.wails.CallByName) {
+                    console.warn('[frontend] window.wails.CallByName not available')
+                    return
+                }
+                const payload = collectPayload()
+                console.log('[frontend] calling SaveSettings with payload:', payload)
+                window.wails.CallByName('main.App.SaveSettings', payload)
+                    .then(function (result) {
+                        console.log('[frontend] SaveSettings resolved:', result)
+                    })
+                    .catch(function (err) {
+                        console.error('[frontend] 保存设置失败:', err)
+                    })
+            }
+
+            function collectPayload() {
+                const style = (document.querySelector('input[name="style"]:checked') || {}).value || currentConfig.style
+                const timeFormat = document.getElementById('timeFormatSelect').value
+                return {
+                    motto: document.getElementById('mottoInput').value || '',
+                    show_in_dock: !!currentConfig.show_in_dock,
+                    theme: currentConfig.theme,
+                    style: style,
+                    time_format: timeFormat,
+                    show_date: document.getElementById('showDateCheck').checked,
+                    show_seconds: style === 'with-seconds',
+                    show_lunar: document.getElementById('showLunarCheck').checked,
+                    show_motto: document.getElementById('showMottoCheck').checked
+                }
+            }
+
+            function applyConfig(cfg) {
+                currentConfig = Object.assign({}, DEFAULT_CONFIG, cfg || {})
+                // 样式（with-seconds/without-seconds）是秒显示的唯一控制源
+                if (currentConfig.style === 'with-seconds') {
+                    currentConfig.show_seconds = true
+                } else if (currentConfig.style === 'without-seconds') {
+                    currentConfig.show_seconds = false
+                }
+                applyTheme(currentConfig.theme)
+                applyClock()
+                applyDisplays()
+            }
+
+            function applyDisplays() {
+                const dateEl = document.getElementById('dateDisplay')
+                const lunarEl = document.getElementById('lunarDisplay')
+                const mottoEl = document.getElementById('mottoDisplay')
+
+                if (dateEl) dateEl.style.display = currentConfig.show_date ? '' : 'none'
+                if (lunarEl) {
+                    lunarEl.style.display = currentConfig.show_lunar ? '' : 'none'
+                    if (currentConfig.show_lunar) {
+                        lunarEl.textContent = getLunarDate(new Date())
+                    }
+                }
+                if (mottoEl) {
+                    if (currentConfig.show_motto) {
+                        mottoEl.style.display = ''
+                        mottoEl.textContent = currentConfig.motto && currentConfig.motto.trim() ? currentConfig.motto : ' '
+                    } else {
+                        mottoEl.style.display = 'none'
+                    }
+                }
+            }
+
+            function applyTheme(theme) {
+                const valid = ['dark', 'light', 'sepia', 'blue', 'forest', 'sunset', 'midnight', 'ocean', 'rose', 'slate']
+                if (!valid.includes(theme)) theme = 'dark'
+                // CSS 用 :root[data-theme="X"] 匹配，:root 是 <html>，所以必须设在 documentElement 上，
+                // 设到 <body> 永远不会匹配，原代码长期待机。
+                document.documentElement.setAttribute('data-theme', theme)
+                currentConfig.theme = theme
+            }
+
+            function buildClock() {
+                // 销毁旧实例：FlipClock 在元素上保存了 timer，必须先清掉，
+                // 否则新旧两套 setInterval 会同时跑，导致数字错位
+                if (clock && typeof clock.clearInterval === 'function') {
+                    try { clock.clearInterval() } catch (e) { /* noop */ }
+                }
+                if (clock && typeof clock.stop === 'function') {
+                    try { clock.stop() } catch (e) { /* noop */ }
+                }
+
+                const $clock = $('#clock')
+                $clock.empty()
+                const is12h = currentConfig.time_format === '12h'
+                // 12h 模式用 TwelveHourClock（带 AM/PM 标识，基于 TwentyFourHourClockFace
+                // 派生）；不是 HourlyCounter，后者是个从 0 递增的纯计数器，没有 12h 语义。
+                // 注意：clockFace 的值是 FlipClock 注册的名字（已含 Face 后缀），
+                // loadClockFace 会再拼一次 "Face"，所以直接用库里注册的值。
+                const face = is12h ? 'TwelveHourClock' : 'TwentyFourHourClock'
+                // 样式（with-seconds/without-seconds）控制是否显示秒，
+                // 与时间格式（24h/12h）相互独立。
+                let showSeconds = !!currentConfig.show_seconds
+                if (currentConfig.style === 'with-seconds') {
+                    showSeconds = true
+                } else if (currentConfig.style === 'without-seconds') {
+                    showSeconds = false
+                }
+                const opts = { clockFace: face, showSeconds: showSeconds }
+                try {
+                    // 必须传 new Date() 作为起始时间：
+                    //   - 24h face 在不传时内部会自动 fallback 到 new Date()
+                    //   - 12h face (TwelveHourClockFace.build 走父类)
+                    //     通过 getMilitaryTime/getTime 走 getDateObject()
+                    //     在 original 不是 Date 时退化为 "now + timeSeconds"
+                    // 显式传入更稳，避免任何隐式行为差异
+                    clock = $clock.FlipClock(new Date(), opts)
+                    // FlipClock 初始化后，$clock 本身就是 .flip-clock-wrapper
+                    if (is12h) {
+                        $clock.addClass('is-12h')
+                    } else {
+                        $clock.removeClass('is-12h')
+                    }
+                } catch (e) {
+                    console.error('FlipClock 初始化失败:', e)
+                }
+            }
+
+            function applyClock() {
+                buildClock()
+            }
+
+            function bindSettingsEvents() {
+                // 关闭：点击遮罩
+                overlay.addEventListener('click', function () {
+                    flushSave(true)
+                    closeSettings()
+                })
+
+                // 关闭：点击左上角红点
+                const closeBtn = document.getElementById('closeBtn')
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function () {
+                        flushSave(true)
+                        closeSettings()
+                    })
+                }
+
+                // Esc 关闭
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && modal.classList.contains('visible')) {
+                        flushSave(true)
+                        closeSettings()
+                    }
+                })
+
+                // 样式切换
+                document.querySelectorAll('input[name="style"]').forEach(function (r) {
+                    r.addEventListener('change', function () {
+                        currentConfig.style = this.value
+                        currentConfig.show_seconds = (this.value === 'with-seconds')
+                        // 样式变化（是否显示秒位）需要重建时钟才能生效
+                        applyClock()
+                        scheduleSave()
+                    })
+                })
+
+                // 时间格式
+                document.getElementById('timeFormatSelect').addEventListener('change', function () {
+                    currentConfig.time_format = this.value
+                    applyClock()
+                    scheduleSave()
+                })
+
+                // 主题
+                document.getElementById('themeSelect').addEventListener('change', function () {
+                    applyTheme(this.value)
+                    scheduleSave()
+                })
+
+                // 显示复选框
+                ;['showDateCheck', 'showLunarCheck', 'showMottoCheck'].forEach(function (id) {
+                    const el = document.getElementById(id)
+                    el.addEventListener('change', function () {
+                        const map = {
+                            showDateCheck: 'show_date',
+                            showLunarCheck: 'show_lunar',
+                            showMottoCheck: 'show_motto'
+                        }
+                        currentConfig[map[id]] = this.checked
+                        applyDisplays()
+                        scheduleSave()
+                    })
+                })
+
+                // 座右铭输入
+                const mottoInput = document.getElementById('mottoInput')
+                mottoInput.addEventListener('input', function () {
+                    currentConfig.motto = this.value
+                    applyDisplays()
+                    scheduleSave()
+                })
+                mottoInput.addEventListener('blur', function () {
+                    flushSave(true)
+                })
+            }
+
+            function applyPersistedConfig() {
+                // 先用默认配置同步初始化一次 FlipClock，避免空白。
+                applyConfig(DEFAULT_CONFIG)
+                if (!window.wails || !window.wails.CallByName) {
+                    console.warn('[frontend] window.wails.CallByName not available')
+                    return
+                }
+                console.log('[frontend] calling GetConfig...')
+                window.wails.CallByName('main.App.GetConfig')
+                    .then(function (cfg) {
+                        console.log('[frontend] GetConfig returned:', cfg)
+                    // 先用样式归一化 show_seconds，确保 needRebuild 判断基于一致的状态
+                    const normalizedCfg = Object.assign({}, DEFAULT_CONFIG, cfg || {})
+                    if (normalizedCfg.style === 'with-seconds') {
+                        normalizedCfg.show_seconds = true
+                    } else if (normalizedCfg.style === 'without-seconds') {
+                        normalizedCfg.show_seconds = false
+                    }
+                    // 主题、显示开关等是覆盖式更新；time_format/style 变了才重建。
+                    const needRebuild =
+                        normalizedCfg.time_format !== currentConfig.time_format ||
+                        normalizedCfg.style !== currentConfig.style ||
+                        !!normalizedCfg.show_seconds !== !!currentConfig.show_seconds
+                    currentConfig = normalizedCfg
+                    applyTheme(currentConfig.theme)
+                    applyDisplays()
+                    if (needRebuild) buildClock()
+                }).catch(function (err) {
+                    console.error('读取配置失败:', err)
+                })
+            }
+
+            function bindMenuEvents() {
+                if (!window.wails || !window.wails.Events || !window.wails.Events.On) {
+                    return
+                }
+                window.wails.Events.On('open-settings', function () {
+                    openSettings()
+                })
+            }
+
+            $(document).ready(function() {
+                // 同步先建一次时钟（用默认 config），让用户立刻看到时间
+                buildClock()
+                bindSettingsEvents()
+                bindMenuEvents()
+                applyPersistedConfig()
+            })
+
+            // 自动调整缩放比例
+            function resize() {
+                const container = document.querySelector('.container')
+                const scaleX = window.innerWidth / width
+                const scaleY = window.innerHeight / height
+                let scale
+                if (window.innerHeight / window.innerWidth > 0.3) {
+                    // 当 height / width > 0.5，仅按照宽度缩放
+                    scale = scaleX
+                } else {
+                    // 否则正常等比例缩放
+                    scale = Math.min(scaleX, scaleY)
+                }
+
+                container.style.zoom = scale
+            }
+
+            function getFormattedDate() {
+                const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
+                const now = new Date()
+
+                const year = now.getFullYear()
+                const month = String(now.getMonth() + 1).padStart(2, '0') // 月份从0开始
+                const date = String(now.getDate()).padStart(2, '0')
+                const day = days[now.getDay()]
+
+                return `${year}-${month}-${date} ${day}`
+            }
+
+            // 农历转换数据（1900-2100）
+            const lunarInfo = [
+                0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+                0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+                0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+                0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+                0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+                0x06ca0,0x0b550,0x15355,0x04da0,0x0a5d0,0x14573,0x052d0,0x0a9a8,0x0e950,0x06aa0,
+                0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+                0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b5a0,0x195a6,
+                0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+                0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,
+                0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+                0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+                0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+                0x05aa0,0x076a3,0x096d0,0x04bd7,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+                0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0
+            ]
+
+            function lYearDays(y) {
+                let sum = 348
+                for (let i = 0x8000; i > 0x8; i >>= 1) sum += (lunarInfo[y - 1900] & i) ? 1 : 0
+                return sum + leapDays(y)
+            }
+            function leapDays(y) {
+                if (leapMonth(y)) return (lunarInfo[y - 1900] & 0x10000) ? 30 : 29
+                return 0
+            }
+            function leapMonth(y) {
+                return lunarInfo[y - 1900] & 0xf
+            }
+            function monthDays(y, m) {
+                return (lunarInfo[y - 1900] & (0x10000 >> m)) ? 30 : 29
+            }
+            function solarDays(y, m) {
+                if (m === 1 || m === 3 || m === 5 || m === 7 || m === 8 || m === 10 || m === 12) return 31
+                if (m === 4 || m === 6 || m === 9 || m === 11) return 30
+                return ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0) ? 29 : 28
+            }
+
+            const lunarMonths = '正二三四五六七八九十冬腊'
+            const lunarDays = '初一初二初三初四初五初六初七初八初九初十十一十二十三十四十五十六十七十八十九二十廿一廿二廿三廿四廿五廿六廿七廿八廿九三十'
+
+            function getLunarDate(date) {
+                let y = date.getFullYear(), m = date.getMonth() + 1, d = date.getDate()
+                if (y < 1900 || y > 2100) return ''
+
+                let offsetDays = 0
+                // 先按公历累加整年天数（不是农历年天数）
+                for (let i = 1900; i < y; i++) offsetDays += ((i % 4 === 0 && i % 100 !== 0) || i % 400 === 0) ? 366 : 365
+                for (let i = 1; i < m; i++) offsetDays += solarDays(y, i)
+                offsetDays += d - 1
+                offsetDays -= 30 // 1900-01-31 对应农历 1900-01-01
+
+                let lunarY = 1900
+                while (offsetDays >= lYearDays(lunarY)) {
+                    offsetDays -= lYearDays(lunarY)
+                    lunarY++
+                }
+
+                let leap = leapMonth(lunarY)
+                let isLeap = false
+                let lunarM = 1
+                while (true) {
+                    if (leap === lunarM && !isLeap) {
+                        let leapMonthDay = leapDays(lunarY)
+                        if (offsetDays >= leapMonthDay) {
+                            offsetDays -= leapMonthDay
+                            isLeap = true
+                            continue
+                        }
+                    }
+                    let md = monthDays(lunarY, lunarM)
+                    if (offsetDays < md) break
+                    offsetDays -= md
+                    lunarM++
+                    isLeap = false
+                }
+
+                let lunarD = offsetDays + 1
+                let monthStr = lunarMonths[lunarM - 1] + '月'
+                if (isLeap) monthStr = '闰' + monthStr
+                let dayStr = lunarDays.substr((lunarD - 1) * 2, 2)
+                return monthStr + dayStr
+            }
+
+            // 设置日期
+            const dateDisplayEl = document.getElementById('dateDisplay')
+            if (dateDisplayEl) dateDisplayEl.innerText = getFormattedDate()
+            const lunarDisplayEl = document.getElementById('lunarDisplay')
+            if (lunarDisplayEl) lunarDisplayEl.innerText = getLunarDate(new Date())
+
+            let resizeTimeout
+
+            function debounceResize() {
+                clearTimeout(resizeTimeout)
+                resizeTimeout = setTimeout(resize, 100)
+            }
+
+            window.addEventListener('resize', debounceResize)
+            resize() // 初始调用
+
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    // 从后台切回前台时，重建一次时钟，防止 setInterval 被节流后
+                    // 秒数停在切走那一刻；同时刷新日期与农历。
+                    try { buildClock() } catch (e) { /* noop */ }
+                    if (dateDisplayEl) dateDisplayEl.innerText = getFormattedDate()
+                    if (lunarDisplayEl) lunarDisplayEl.innerText = getLunarDate(new Date())
+                }
+            })
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'F11') {
+                    e.preventDefault()
+                    if (window.wails && window.wails.CallByName) {
+                        window.wails.CallByName('main.App.ToggleFullscreen').catch(function(err) {
+                            console.error('[frontend] ToggleFullscreen failed:', err)
+                        })
+                    }
+                }
+                // 禁止 Cmd+W 关闭窗口
+                if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
+                    e.preventDefault()
+                    return false
+                }
+            })
+        </script>
+    </body>
+</html>

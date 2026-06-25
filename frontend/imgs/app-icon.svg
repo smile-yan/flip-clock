@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="flip-clock app icon">
+  <defs>
+    <linearGradient id="bg" x1="168" y1="112" x2="856" y2="912" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#273241"/>
+      <stop offset="0.48" stop-color="#141a22"/>
+      <stop offset="1" stop-color="#07090d"/>
+    </linearGradient>
+    <linearGradient id="cardTop" x1="248" y1="244" x2="776" y2="508" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#424957"/>
+      <stop offset="1" stop-color="#1b2028"/>
+    </linearGradient>
+    <linearGradient id="cardBottom" x1="248" y1="516" x2="776" y2="788" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#161b22"/>
+      <stop offset="1" stop-color="#07090d"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="312" y1="300" x2="724" y2="752" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7f1df"/>
+      <stop offset="1" stop-color="#d7c9a3"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="30" stdDeviation="38" flood-color="#000000" flood-opacity="0.42"/>
+    </filter>
+    <filter id="innerGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="-2" stdDeviation="6" flood-color="#ffffff" flood-opacity="0.08"/>
+    </filter>
+    <clipPath id="cardClip">
+      <rect x="214" y="236" width="596" height="552" rx="76"/>
+    </clipPath>
+  </defs>
+
+  <rect x="80" y="80" width="864" height="864" rx="188" fill="url(#bg)"/>
+  <path d="M244 160c121-64 361-64 511 49 82 62 118 144 123 220" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="28" stroke-linecap="round"/>
+  <path d="M157 699c68 116 191 183 341 193 168 11 300-48 390-159" fill="none" stroke="#000000" stroke-opacity="0.22" stroke-width="48" stroke-linecap="round"/>
+
+  <g filter="url(#softShadow)">
+    <rect x="214" y="236" width="596" height="552" rx="76" fill="#0b0f14"/>
+    <g clip-path="url(#cardClip)">
+      <rect x="214" y="236" width="596" height="276" fill="url(#cardTop)"/>
+      <rect x="214" y="512" width="596" height="276" fill="url(#cardBottom)"/>
+      <rect x="214" y="507" width="596" height="10" fill="#05070a"/>
+      <path d="M214 507h596" stroke="#6f7682" stroke-opacity="0.38" stroke-width="2"/>
+      <path d="M276 236h448c42 0 76 34 76 76v33H200v-33c0-42 34-76 76-76Z" fill="#ffffff" opacity="0.08"/>
+      <path d="M214 512h596v26H214z" fill="#000000" opacity="0.28"/>
+    </g>
+
+    <rect x="188" y="455" width="56" height="74" rx="22" fill="#0a0d12"/>
+    <rect x="780" y="455" width="56" height="74" rx="22" fill="#0a0d12"/>
+    <rect x="200" y="478" width="32" height="28" rx="12" fill="#222a34"/>
+    <rect x="792" y="478" width="32" height="28" rx="12" fill="#222a34"/>
+
+    <g filter="url(#innerGlow)">
+      <text x="512" y="620"
+            text-anchor="middle"
+            font-family="Avenir Next, SF Pro Display, Helvetica Neue, Arial, sans-serif"
+            font-size="330"
+            font-weight="700"
+            fill="url(#accent)">12</text>
+    </g>
+
+    <path d="M276 236h448c42 0 76 34 76 76v400c0 42-34 76-76 76H276c-42 0-76-34-76-76V312c0-42 34-76 76-76Z"
+          fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="4"/>
+  </g>
+
+  <circle cx="742" cy="248" r="22" fill="#82d8c7" opacity="0.86"/>
+  <circle cx="786" cy="292" r="9" fill="#82d8c7" opacity="0.55"/>
+</svg>
