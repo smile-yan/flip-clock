@@ -328,6 +328,11 @@
             }
 
             function bindSettingsEvents() {
+                // 禁用右键菜单
+                document.addEventListener('contextmenu', function (e) {
+                    e.preventDefault()
+                })
+
                 // 关闭：点击遮罩
                 overlay.addEventListener('click', function () {
                     flushSave(true)
