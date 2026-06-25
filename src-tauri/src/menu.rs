@@ -37,7 +37,7 @@ pub fn create_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>>
         // 全屏 (Cmd+Ctrl+F)
         .item(
             &MenuItemBuilder::with_id("fullscreen", "全屏")
-                .accelerator("Cmd+Shift+F")
+                .accelerator("Ctrl+Shift+F")
                 .build(app)?,
         )
         .build()?;
