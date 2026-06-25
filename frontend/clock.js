@@ -469,6 +469,15 @@ function openSettings() {
     modal.classList.add('visible');
 }
 
+function showAboutDialog() {
+    const aboutMessage = `翻转时钟 v1.0.0\n\n一个简洁优雅的翻页时钟应用\n\nhttps://github.com/smile-yan/easy-flip-clock`;
+    alert(aboutMessage);
+}
+
+function showCheckUpdatesDialog() {
+    alert('检查更新功能即将上线');
+}
+
 function closeSettings() {
     overlay.classList.remove('visible');
     modal.classList.remove('visible');
@@ -692,6 +701,16 @@ function bindGlobalEvents() {
     if (window.__TAURI__) {
         window.__TAURI__.event.listen('open-settings', () => {
             openSettings();
+        });
+
+        // About dialog from menu
+        window.__TAURI__.event.listen('show-about', () => {
+            showAboutDialog();
+        });
+
+        // Check updates from menu (simplified)
+        window.__TAURI__.event.listen('check-updates', () => {
+            showCheckUpdatesDialog();
         });
     }
 }

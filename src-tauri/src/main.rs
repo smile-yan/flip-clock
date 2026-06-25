@@ -7,7 +7,7 @@ mod menu;
 use config::{available_styles, available_themes, available_time_formats, load, save};
 use menu::create_app_menu;
 use std::collections::HashMap;
-use tauri::{menu::MenuEvent, Emitter, Manager, Runtime};
+use tauri::{menu::MenuEvent, Manager, Runtime};
 
 #[tauri::command]
 fn get_config() -> Result<HashMap<String, serde_json::Value>, String> {
@@ -233,6 +233,25 @@ fn main() {
             
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {
+                // Set window size to half of screen (delayed to ensure window is ready)
+                let win = window.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                    if let Ok(Some(monitor)) = win.current_monitor() {
+                        let screen_width = monitor.size().width as f64;
+                        let screen_height = monitor.size().height as f64;
+                        let scale_factor = win.scale_factor().unwrap_or(1.0);
+                        let half_width = (screen_width / 2.0 / scale_factor) as u32;
+                        let half_height = (screen_height / 2.0 / scale_factor) as u32;
+                        log::info!("Screen: {}x{}, scale: {}, setting window to: {}x{}",
+                            screen_width, screen_height, scale_factor, half_width, half_height);
+                        let _ = win.set_size(tauri::Size::Physical(
+                            tauri::PhysicalSize { width: half_width, height: half_height }
+                        ));
+                        let _ = win.center();
+                    }
+                });
+
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { .. } = event {
                         log::info!("Window close requested, saving config");
