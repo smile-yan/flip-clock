@@ -116,8 +116,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Artifact downloaded to dist/ (repo root)
-          cd dist
+          # Artifact downloaded to ../dist/ (relative to src-tauri/)
+          cd ../dist
           arm64_dmg=$(find . -name "*darwin-aarch64*.dmg" | head -1)
           amd64_dmg=$(find . -name "*darwin-x86_64*.dmg" | head -1)
 
@@ -126,7 +126,7 @@ jobs:
 
           if [[ -z "${arm64_dmg}" ]] || [[ -z "${amd64_dmg}" ]]; then
             echo "Error: Missing DMG files"
-            ls -la src-tauri/dist/
+            ls -la .
             exit 1
           fi
 
