@@ -253,8 +253,6 @@ fn main() {
 
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {
-
-
                 // Set window size to half of screen (delayed to ensure window is ready)
                 let win = window.clone();
                 std::thread::spawn(move || {
