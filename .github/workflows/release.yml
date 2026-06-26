@@ -15,8 +15,8 @@ env:
 
 jobs:
   # ==================== Desktop Builds ====================
-  build-desktop:
-    name: Build Desktop ${{ matrix.platform }}-${{ matrix.arch }}
+  build:
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -73,7 +73,7 @@ jobs:
             cp "${artifact_dir}"/*.exe "${out_dir}/" 2>/dev/null || true
           elif [[ "${{ matrix.platform }}" == "darwin" ]]; then
             artifact_dir="target/${{ matrix.arch }}/release/bundle/dmg"
-            out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}}-${{ matrix.platform }}-${{ matrix.arch }}"
+            out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}"
             mkdir -p "${out_dir}"
             cp "${artifact_dir}"/*.dmg "${out_dir}/" 2>/dev/null || true
           else
@@ -91,107 +91,10 @@ jobs:
           path: dist/${{ env.APP_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}/
           if-no-files-found: error
 
-  # ==================== iOS Build ====================
-  build-ios:
-    name: Build iOS
-    runs-on: macos-latest
-    # iOS builds require macOS
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
-      - name: Setup iOS SDK
-        run: |
-          # iOS SDK is pre-installed on macOS runners
-          echo "XCODE_DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer" >> $GITHUB_ENV
-          xcrun simctl list devices available | head -20
-
-      - name: Build iOS
-        run: |
-          cd src-tauri
-          cargo tauri build --target aarch64-apple-ios
-
-      - name: Prepare iOS artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-ios-aarch64"
-          mkdir -p "${out_dir}"
-          # Copy the .app bundle
-          find target -name "*.app" -type d | head -1 | xargs -I {} cp -r {} "${out_dir}/"
-          ls -la "${out_dir}/"
-
-      - name: Upload iOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_NAME }}-${{ github.ref_name }}-ios-aarch64
-          path: dist/${{ env.APP_NAME }}-${{ github.ref_name }}-ios-aarch64/
-          if-no-files-found: error
-
-  # ==================== Android Build ====================
-  build-android:
-    name: Build Android
-    runs-on: ubuntu-22.04
-    # Android can be built on Linux
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ env.RUST_TOOLCHAIN }}
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android NDK
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;26.1.10909125" 2>/dev/null || true
-          # Set NDK version
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
-
-      - name: Build Android
-        run: |
-          cd src-tauri
-          cargo tauri build
-
-      - name: Prepare Android artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-android"
-          mkdir -p "${out_dir}"
-          # Find and copy APK/AAB
-          find src-tauri/target -name "*.apk" -o -name "*.aab" | head -5 | while read f; do
-            cp "$f" "${out_dir}/"
-          done
-          ls -la "${out_dir}/"
-
-      - name: Upload Android artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.APP_NAME }}-${{ github.ref_name }}-android
-          path: dist/${{ env.APP_NAME }}-${{ github.ref_name }}-android/
-          if-no-files-found: error
-
   # ==================== macOS Universal DMG ====================
   package-macos:
     name: Package macOS Universal DMG
-    needs: build-desktop
+    needs: build
     runs-on: macos-latest
 
     steps:
@@ -276,9 +179,7 @@ jobs:
   release:
     name: Create GitHub Release
     needs:
-      - build-desktop
-      - build-ios
-      - build-android
+      - build
       - package-macos
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
