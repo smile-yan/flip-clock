@@ -124,6 +124,63 @@ flip-clock/
 | `rose` | Soft pink tones |
 | `slate` | Neutral gray |
 
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and release automation.
+
+### Workflows
+
+#### CI Workflow (`.github/workflows/ci.yml`)
+
+Runs on every push to `main`/`master` and on pull requests:
+
+| Job | Description |
+|-----|-------------|
+| `lint` | Code formatting check and Clippy linting |
+| `test` | Unit tests via `cargo test` |
+| `build-check` | Cross-platform build verification (Linux, Windows, macOS) |
+
+#### Release Workflow (`.github/workflows/release.yml`)
+
+Triggered by:
+- Pushing a version tag (`git tag v*` and push)
+- Manual trigger via `workflow_dispatch`
+
+Builds and packages:
+- **Linux**: Standalone binary
+- **Windows**: NSIS installer
+- **macOS**: Universal DMG (arm64 + x86_64)
+
+Artifacts are uploaded to GitHub Releases as draft releases.
+
+### Running Locally
+
+```bash
+# Build with Tauri (produces native binaries)
+cd src-tauri
+cargo tauri build
+
+# Or use the build script (includes DMG icon fix)
+./scripts/build.sh
+```
+
+### Creating a Release
+
+```bash
+# Update version in:
+# - src-tauri/Cargo.toml
+# - src-tauri/tauri.conf.json
+
+# Create and push a tag
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The release workflow will automatically:
+1. Build for all platforms
+2. Package macOS DMG as universal binary
+3. Create a draft GitHub Release with artifacts
+
 ## License
 
 BSD-4-Clause

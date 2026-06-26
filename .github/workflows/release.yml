@@ -1,0 +1,286 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: flip-clock
+  TAURI_VERSION: '2'
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x86_64
+          - os: windows-latest
+            platform: windows
+            arch: x86_64
+          - os: macos-latest
+            platform: darwin
+            arch: aarch64
+          - os: macos-latest
+            platform: darwin
+            arch: x86_64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          targets: ${{ matrix.platform }}-${{ matrix.arch }}
+
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install macOS SDK
+        if: matrix.platform == 'darwin'
+        uses: tausia-dev/macos-sdk@v0.1.0
+
+      - name: Install Rust dependencies
+        run: cd src-tauri && cargo fetch
+
+      - name: Build
+        run: |
+          cd src-tauri
+          cargo tauri build --target ${{ matrix.platform }}-${{ matrix.arch }}
+
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Tauri outputs to target/<target>/release/bundle/
+          # Find the artifact based on platform
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then
+            artifact_dir="target/x86_64-pc-windows-msvc/release/bundle/nsis"
+            ext=".exe"
+          elif [[ "${{ matrix.platform }}" == "darwin" ]]; then
+            artifact_dir="target/${{ matrix.platform }}-${{ matrix.arch }}-apple-darwin/release/bundle/dmg"
+            ext=".dmg"
+          else
+            artifact_dir="target/${{ matrix.platform }}-${{ matrix.arch }}-unknown-linux-gnu/release/bundle/app"
+            ext=""
+          fi
+
+          # Create output directory
+          out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}"
+          mkdir -p "${out_dir}"
+
+          # Find and copy the artifact
+          if [[ "${{ matrix.platform }}" == "windows" ]]; then
+            cp "${artifact_dir}"/*.exe "${out_dir}/" 2>/dev/null || true
+            # Also try to find the installer
+            if ls "${artifact_dir}"/*.exe 1>/dev/null 2>&1; then
+              artifact_file=$(ls "${artifact_dir}"/*.exe | head -1)
+              cp "${artifact_file}" "${out_dir}/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}.exe"
+            fi
+          elif [[ "${{ matrix.platform }}" == "darwin" ]]; then
+            cp "${artifact_dir}"/*.dmg "${out_dir}/" 2>/dev/null || true
+            if ls "${artifact_dir}"/*.dmg 1>/dev/null 2>&1; then
+              dmg_file=$(ls "${artifact_dir}"/*.dmg | head -1)
+              cp "${dmg_file}" "${out_dir}/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}.dmg"
+            fi
+          fi
+
+          # Show what we have
+          ls -la "${out_dir}/"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/${{ env.APP_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}/
+          if-no-files-found: error
+
+  package-macos:
+    name: Package macOS Universal DMG
+    needs: build
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-*
+          path: dist
+
+      - name: List downloaded artifacts
+        run: |
+          find dist -type f -name "*.dmg" -o -name "*.app" | head -20
+
+      - name: Create universal DMG
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Create a temporary directory for the DMG contents
+          volume_dir="/tmp/${APP_NAME}-volume"
+          rm -rf "${volume_dir}"
+          mkdir -p "${volume_dir}"
+
+          # Copy both arm64 and x86_64 DMGs to staging area
+          mkdir -p "${volume_dir}/arm64" "${volume_dir}/x86_64"
+
+          # Find and mount arm64 DMG
+          arm64_dmg=$(find dist -name "*darwin-aarch64*.dmg" | head -1)
+          amd64_dmg=$(find dist -name "*darwin-x86_64*.dmg" | head -1)
+
+          echo "Arm64 DMG: ${arm64_dmg}"
+          echo "Amd64 DMG: ${amd64_dmg}"
+
+          if [[ -z "${arm64_dmg}" ]] || [[ -z "${amd64_dmg}" ]]; then
+            echo "Error: Could not find both DMG files"
+            exit 1
+          fi
+
+          # Mount and copy arm64 app
+          mount_dir_arm64="/tmp/mnt-arm64"
+          mkdir -p "${mount_dir_arm64}"
+          hdiutil attach "${arm64_dmg}" -readonly -nobrowse -mountpoint "${mount_dir_arm64}" 2>/dev/null || true
+          if [ -d "${mount_dir_arm64}/"*.app ]; then
+            cp -R "${mount_dir_arm64}/"*.app "${volume_dir}/arm64/"
+          fi
+          hdiutil detach "${mount_dir_arm64}" 2>/dev/null || true
+
+          # Mount and copy x86_64 app
+          mount_dir_amd64="/tmp/mnt-amd64"
+          mkdir -p "${mount_dir_amd64}"
+          hdiutil attach "${amd64_dmg}" -readonly -nobrowse -mountpoint "${mount_dir_amd64}" 2>/dev/null || true
+          if [ -d "${mount_dir_amd64}/"*.app ]; then
+            cp -R "${mount_dir_amd64}/"*.app "${volume_dir}/x86_64/"
+          fi
+          hdiutil detach "${mount_dir_amd64}" 2>/dev/null || true
+
+          # Get the app name
+          arm64_app=$(ls "${volume_dir}/arm64/"*.app 2>/dev/null | head -1 || echo "")
+          if [[ -n "${arm64_app}" ]]; then
+            app_name=$(basename "${arm64_app}")
+            echo "App name: ${app_name}"
+
+            # Copy arm64 app to volume
+            cp -R "${arm64_app}" "${volume_dir}/"
+
+            # Create universal app by merging
+            universal_app="${volume_dir}/${app_name}"
+            x86_app="${volume_dir}/x86_64/${app_name}"
+
+            if [[ -d "${x86_app}" ]]; then
+              # Copy x86_64 binaries to arm64 app
+              mkdir -p "${universal_app}/Contents/MacOS"
+              cp "${x86_app}/Contents/MacOS/"* "${universal_app}/Contents/MacOS/" 2>/dev/null || true
+
+              # Make binary executable
+              chmod +x "${universal_app}/Contents/MacOS/"*
+            fi
+
+            # Create symlink to Applications
+            ln -s /Applications "${volume_dir}/Applications"
+
+            # Copy icon
+            if [ -f "src-tauri/icons/icon.icns" ]; then
+              mkdir -p "${universal_app}/Contents/Resources"
+              cp "src-tauri/icons/icon.icns" "${universal_app}/Contents/Resources/"
+            fi
+
+            # Create DMG
+            dmg_output="dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal/${APP_NAME}-${GITHUB_REF_NAME}-macos-universal.dmg"
+            mkdir -p "dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal"
+
+            hdiutil create \
+              -volname "Flip Clock" \
+              -srcfolder "${volume_dir}" \
+              -ov \
+              -format UDZO \
+              -fs HFS+ \
+              -scrub \
+              "${dmg_output}"
+
+            # Verify DMG
+            echo "Verifying DMG..."
+            hdiutil verify "${dmg_output}"
+            shasum -a 256 "${dmg_output}"
+          fi
+
+      - name: Upload macOS package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-universal
+          path: dist/${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-universal/${{ env.APP_NAME }}-${{ github.ref_name }}-macos-universal.dmg
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub Release
+    needs:
+      - build
+      - package-macos
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ env.APP_NAME }}-${{ github.ref_name }}-*
+          path: release-assets
+
+      - name: List release assets
+        run: |
+          find release-assets -type f -print
+          echo "---"
+          find release-assets -type f -exec ls -lh {} \;
+          echo "---"
+          find release-assets -type f -exec shasum -a 256 {} \;
+
+      - name: Find artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          linux_artifact=$(find release-assets -name "*linux-x86_64*" -type f | head -1)
+          windows_artifact=$(find release-assets -name "*windows-x86_64*" -type f | head -1)
+          macos_dmg=$(find release-assets -name "*darwin-universal*" -type f | head -1)
+
+          echo "Linux: ${linux_artifact}"
+          echo "Windows: ${windows_artifact}"
+          echo "macOS: ${macos_dmg}"
+
+          # Create file listing for assets
+          {
+            echo "ASSET_LINUX=${linux_artifact}"
+            echo "ASSET_WINDOWS=${windows_artifact}"
+            echo "ASSET_MACOS=${macos_dmg}"
+          } >> $GITHUB_ENV
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            ${{ env.ASSET_LINUX }}
+            ${{ env.ASSET_WINDOWS }}
+            ${{ env.ASSET_MACOS }}
