@@ -95,7 +95,7 @@ jobs:
           cd bundle
           # Find DMG files
           ARM64=$(find . -name "*aarch64*.dmg" | head -1)
-          AMD64=$(find . -name "*x86_64*.dmg" | head -1)
+          AMD64=$(find . -name "*x64*.dmg" | head -1)
           echo "Arm64: $ARM64"
           echo "Amd64: $AMD64"
 
