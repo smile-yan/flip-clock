@@ -470,7 +470,7 @@ function openSettings() {
 }
 
 function showAboutDialog() {
-    const aboutMessage = `翻转时钟 v1.0.0\n\n一个简洁优雅的翻页时钟应用\n\nhttps://github.com/smile-yan/easy-flip-clock`;
+    const aboutMessage = `翻转时钟 v1.0.0\n\n一个简洁优雅的翻页时钟应用\n\nGitHub: https://github.com/smile-yan/easy-flip-clock`;
     alert(aboutMessage);
 }
 
