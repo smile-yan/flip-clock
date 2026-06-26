@@ -81,10 +81,15 @@ jobs:
             mkdir -p "${out_dir}"
             cp "${artifact_dir}"/*.dmg "${out_dir}/" 2>/dev/null || true
           else
-            artifact_dir="target/${{ matrix.arch }}/release/bundle/app"
+            # Linux: copy all bundle formats
             out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}"
             mkdir -p "${out_dir}"
-            cp -r "${artifact_dir}"/* "${out_dir}/" 2>/dev/null || true
+            # Copy AppImage, deb, rpm
+            cp target/${{ matrix.arch }}/release/bundle/*/*.AppImage "${out_dir}/" 2>/dev/null || true
+            cp target/${{ matrix.arch }}/release/bundle/deb/*.deb "${out_dir}/" 2>/dev/null || true
+            cp target/${{ matrix.arch }}/release/bundle/rpm/*.rpm "${out_dir}/" 2>/dev/null || true
+            # Also copy the binary
+            cp target/${{ matrix.arch }}/release/${{ env.APP_NAME }} "${out_dir}/" 2>/dev/null || true
           fi
           ls -la "${out_dir}/"
 
