@@ -69,6 +69,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cd src-tauri
           if [[ "${{ matrix.platform }}" == "windows" ]]; then
             artifact_dir="target/x86_64-pc-windows-msvc/release/bundle/nsis"
             out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-windows-x86_64"
