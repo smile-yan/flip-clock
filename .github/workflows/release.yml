@@ -116,7 +116,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd src-tauri
+          # Downloaded to flip-clock/dist/, script runs from flip-clock/src-tauri/
           arm64_dmg=$(find ../dist -name "*darwin-aarch64*.dmg" | head -1)
           amd64_dmg=$(find ../dist -name "*darwin-x86_64*.dmg" | head -1)
 
