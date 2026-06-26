@@ -57,6 +57,9 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli
+
       - name: Build
         run: |
           cd src-tauri
