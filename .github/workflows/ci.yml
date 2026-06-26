@@ -32,7 +32,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.95.0
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
 
       - name: Check formatting
@@ -41,7 +41,6 @@ jobs:
 
       - name: Clippy
         run: |
-          rustup component add clippy
           cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
 
   test:
@@ -65,15 +64,15 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.95.0
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
 
       - name: Run tests
         run: |
           cargo test --manifest-path src-tauri/Cargo.toml
 
-  build-check:
-    name: Build Check
+  build-check-desktop:
+    name: Build Check Desktop (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -96,7 +95,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.95.0
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.arch }}
 
       - name: Install Linux dependencies
@@ -114,3 +113,53 @@ jobs:
       - name: Build
         run: |
           cargo build --manifest-path src-tauri/Cargo.toml --target ${{ matrix.arch }}
+
+  build-check-ios:
+    name: Build Check iOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: aarch64-apple-ios
+
+      - name: Build
+        run: |
+          cargo build --manifest-path src-tauri/Cargo.toml --target aarch64-apple-ios
+
+  build-check-android:
+    name: Build Check Android
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: aarch64-linux-android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "ndk;26.1.10909125" 2>/dev/null || true
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.1.10909125" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          cargo build --manifest-path src-tauri/Cargo.toml --target aarch64-linux-android
