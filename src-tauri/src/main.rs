@@ -156,9 +156,9 @@ fn handle_menu_event<R: Runtime>(app: &tauri::AppHandle<R>, event: MenuEvent) {
 
     match id {
         "about" => {
-            // Show about dialog via eval
+            // Call openAbout directly via eval
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval("alert('翻转时钟 v1.0.0\\n\\n一个简洁优雅的翻页时钟应用\\n\\nhttps://github.com/smile-yan/easy-flip-clock')");
+                let _ = window.eval("if (typeof openAbout === 'function') { openAbout(); } else { console.error('openAbout not found'); }");
             }
         }
         "settings" => {

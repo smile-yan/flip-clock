@@ -574,3 +574,162 @@ body {
     line-height: 1;
     display: block;
 }
+
+/* === 关于弹窗遮罩 === */
+.about-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    z-index: 999;
+}
+.about-overlay.visible { display: block; }
+
+/* === 关于弹窗主体 (macOS 深色) === */
+.about-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--modal-bg);
+    color: var(--modal-text);
+    border: 1px solid var(--modal-border);
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    padding: 0 28px 24px 28px;
+    z-index: 1000;
+    width: 340px;
+    max-width: 92vw;
+    font-size: 14px;
+}
+.about-modal.visible { display: block; }
+
+/* 顶部 macOS 窗口装饰 */
+.about-modal .window-chrome {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 14px 0 10px 0;
+    border-bottom: 1px solid var(--modal-section-line);
+    margin-bottom: 20px;
+}
+.about-modal .window-chrome .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+}
+.about-modal .window-chrome .dot.red    { background: #ff5f57; }
+.about-modal .window-chrome .dot.yellow { background: #febc2e; }
+.about-modal .window-chrome .dot.green  { background: #28c840; }
+
+/* 关闭按钮 */
+.about-modal .window-chrome .dot.close-btn,
+.about-modal .window-chrome .dot.about-close-btn {
+    cursor: pointer;
+    position: relative;
+}
+.about-modal .window-chrome .dot.about-close-btn::before,
+.about-modal .window-chrome .dot.about-close-btn::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 1.5px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 1px;
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+    transition: opacity 0.12s ease;
+}
+.about-modal .window-chrome .dot.about-close-btn::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+.about-modal .window-chrome .dot.about-close-btn:hover::before,
+.about-modal .window-chrome .dot.about-close-btn:hover::after {
+    opacity: 1;
+}
+.about-modal .window-chrome .window-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--modal-muted);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+/* 关于弹窗内容 */
+.about-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 10px 0;
+}
+
+.about-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.about-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.about-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--modal-text);
+    margin: 0 0 8px 0;
+}
+
+.about-version {
+    font-size: 13px;
+    color: var(--modal-muted);
+    margin: 0 0 12px 0;
+}
+
+.about-desc {
+    font-size: 14px;
+    color: var(--modal-label);
+    margin: 0 0 20px 0;
+    line-height: 1.5;
+}
+
+.about-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.about-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #5ac8fa;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.about-link:hover {
+    color: #7dd3fc;
+    text-decoration: underline;
+}
+
+.about-divider {
+    color: var(--modal-muted);
+}
+
+.about-copyright {
+    color: var(--modal-muted);
+}
