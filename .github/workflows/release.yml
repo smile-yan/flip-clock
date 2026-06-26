@@ -166,7 +166,6 @@ jobs:
           generate_release_notes: true
           files: |
             release-assets/nsis/*.exe
-            release-assets/appimage/*.AppImage
             release-assets/deb/*.deb
             release-assets/rpm/*.rpm
             release-assets/msi/*.msi
