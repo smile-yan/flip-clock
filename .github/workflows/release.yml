@@ -14,7 +14,6 @@ env:
   RUST_TOOLCHAIN: '1.95.0'
 
 jobs:
-  # ==================== Desktop Builds ====================
   build:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
@@ -65,40 +64,15 @@ jobs:
           cd src-tauri
           cargo tauri build --target ${{ matrix.arch }}
 
-      - name: Prepare artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Get absolute paths
-          WORK_DIR="$PWD"
-          cd src-tauri
-          SRC_DIR="$PWD"
-          OUT_DIR="${SRC_DIR}/dist/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}"
-          mkdir -p "${OUT_DIR}"
-
-          if [[ "${{ matrix.platform }}" == "windows" ]]; then
-            cp "${SRC_DIR}/target/x86_64-pc-windows-msvc/release/bundle/nsis"/*.exe "${OUT_DIR}/" 2>/dev/null || true
-          elif [[ "${{ matrix.platform }}" == "darwin" ]]; then
-            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle/dmg"/*.dmg "${OUT_DIR}/" 2>/dev/null || true
-          else
-            # Linux: copy all bundle formats
-            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle"/*/*.AppImage "${OUT_DIR}/" 2>/dev/null || true
-            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle/deb"/*.deb "${OUT_DIR}/" 2>/dev/null || true
-            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle/rpm"/*.rpm "${OUT_DIR}/" 2>/dev/null || true
-            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/${APP_NAME}" "${OUT_DIR}/" 2>/dev/null || true
-          fi
-          ls -la "${OUT_DIR}/"
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APP_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}
-          path: src-tauri/dist/${{ env.APP_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}/
+          path: src-tauri/target/${{ matrix.arch }}/release/bundle/
           if-no-files-found: error
 
-  # ==================== macOS Universal DMG ====================
   package-macos:
-    name: Package macOS Universal DMG
+    name: Package macOS DMG
     needs: build
     runs-on: macos-latest
 
@@ -110,81 +84,60 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: ${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-*
-          path: dist
+          path: bundle
+
+      - name: List downloaded
+        run: |
+          find bundle -type f | head -20
 
       - name: Create universal DMG
-        shell: bash
         run: |
-          set -euo pipefail
-          # Artifact downloaded to ../dist/ (relative to src-tauri/)
-          cd ../dist
-          arm64_dmg=$(find . -name "*darwin-aarch64*.dmg" | head -1)
-          amd64_dmg=$(find . -name "*darwin-x86_64*.dmg" | head -1)
+          cd bundle
+          # Find DMG files
+          ARM64=$(find . -name "*aarch64*.dmg" | head -1)
+          AMD64=$(find . -name "*x86_64*.dmg" | head -1)
+          echo "Arm64: $ARM64"
+          echo "Amd64: $AMD64"
 
-          echo "Arm64 DMG: ${arm64_dmg}"
-          echo "Amd64 DMG: ${amd64_dmg}"
-
-          if [[ -z "${arm64_dmg}" ]] || [[ -z "${amd64_dmg}" ]]; then
+          if [ -z "$ARM64" ] || [ -z "$AMD64" ]; then
             echo "Error: Missing DMG files"
-            ls -la .
             exit 1
           fi
 
-          # Mount and merge
-          volume_dir="/tmp/${APP_NAME}-volume"
-          rm -rf "${volume_dir}"
-          mkdir -p "${volume_dir}"
+          # Mount and copy apps
+          mkdir -p /tmp/arm64-app /tmp/amd64-app /tmp/universal
+          hdiutil attach "$ARM64" -readonly -nobrowse -mountpoint /tmp/arm64-app
+          cp -R /tmp/arm64-app/*.app /tmp/universal/
+          hdiutil detach /tmp/arm64-app
 
-          # Mount arm64
-          mnt1="/tmp/mnt1"
-          mkdir -p "${mnt1}"
-          hdiutil attach "${arm64_dmg}" -readonly -nobrowse -mountpoint "${mnt1}" 2>/dev/null || true
-          if [ -d "${mnt1}/"*.app ]; then
-            cp -R "${mnt1}/"*.app "${volume_dir}/"
+          hdiutil attach "$AMD64" -readonly -nobrowse -mountpoint /tmp/amd64-app
+          APP=$(ls /tmp/amd64-app/*.app 2>/dev/null | head -1)
+          if [ -n "$APP" ]; then
+            cp /tmp/amd64-app/*.app/Contents/MacOS/* /tmp/universal/*.app/Contents/MacOS/ 2>/dev/null || true
+            chmod +x /tmp/universal/*.app/Contents/MacOS/*
           fi
-          hdiutil detach "${mnt1}" 2>/dev/null || true
+          hdiutil detach /tmp/amd64-app
 
-          # Mount x86_64
-          mnt2="/tmp/mnt2"
-          mkdir -p "${mnt2}"
-          hdiutil attach "${amd64_dmg}" -readonly -nobrowse -mountpoint "${mnt2}" 2>/dev/null || true
-          x86_app=$(ls "${mnt2}/"*.app 2>/dev/null | head -1 || echo "")
-          hdiutil detach "${mnt2}" 2>/dev/null || true
-
-          if [[ -n "${x86_app}" ]] && [[ -d "${volume_dir}/"*.app ]]; then
-            app_name=$(basename "${x86_app}")
-            mkdir -p "${volume_dir}/${app_name}/Contents/MacOS"
-            cp "${x86_app}/Contents/MacOS/"* "${volume_dir}/${app_name}/Contents/MacOS/" 2>/dev/null || true
-            chmod +x "${volume_dir}/${app_name}/Contents/MacOS/"*
-          fi
-
-          ln -s /Applications "${volume_dir}/Applications"
+          ln -sf /Applications /tmp/universal/
 
           # Create DMG
-          dmg_output="${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal/${APP_NAME}-${GITHUB_REF_NAME}-macos-universal.dmg"
-          mkdir -p "${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal"
-
           hdiutil create \
             -volname "Flip Clock" \
-            -srcfolder "${volume_dir}" \
+            -srcfolder /tmp/universal \
             -ov -format UDZO \
-            -fs HFS+ -scrub \
-            "${dmg_output}"
+            -fs HFS+ \
+            -scrub \
+            ../flip-clock-${{ github.ref_name }}-macos-universal.dmg
 
-          echo "Verifying DMG..."
-          hdiutil verify "${dmg_output}"
-          shasum -a 256 "${dmg_output}"
-
-      - name: Upload macOS package artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-universal
-          path: dist/${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-universal/
+          name: ${{ env.APP_NAME }}-${{ github.ref_name }}-macos-universal
+          path: flip-clock-${{ github.ref_name }}-macos-universal.dmg
           if-no-files-found: error
 
-  # ==================== Create Release ====================
   release:
-    name: Create GitHub Release
+    name: Create Release
     needs:
       - build
       - package-macos
@@ -199,15 +152,12 @@ jobs:
           path: release-assets
           merge-multiple: true
 
-      - name: List release assets
+      - name: List assets
         run: |
-          echo "=== All artifacts ==="
-          find release-assets -type f | while read f; do
-            echo "$f"
-            ls -lh "$f"
-          done
+          echo "=== Assets ==="
+          find release-assets -type f -exec ls -lh {} \;
 
-      - name: Create draft release
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
