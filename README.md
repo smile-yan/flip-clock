@@ -183,4 +183,4 @@ The release workflow will automatically:
 
 ## License
 
-BSD-4-Clause
+MIT License
