@@ -19,12 +19,18 @@ fn get_config() -> Result<HashMap<String, serde_json::Value>, String> {
     map.insert("height".to_string(), serde_json::json!(cfg.height));
     map.insert("x".to_string(), serde_json::json!(cfg.x));
     map.insert("y".to_string(), serde_json::json!(cfg.y));
-    map.insert("showInDock".to_string(), serde_json::json!(cfg.show_in_dock));
+    map.insert(
+        "showInDock".to_string(),
+        serde_json::json!(cfg.show_in_dock),
+    );
     map.insert("theme".to_string(), serde_json::json!(cfg.theme));
     map.insert("style".to_string(), serde_json::json!(cfg.style));
     map.insert("timeFormat".to_string(), serde_json::json!(cfg.time_format));
     map.insert("showDate".to_string(), serde_json::json!(cfg.show_date));
-    map.insert("showSeconds".to_string(), serde_json::json!(cfg.show_seconds));
+    map.insert(
+        "showSeconds".to_string(),
+        serde_json::json!(cfg.show_seconds),
+    );
     map.insert("showLunar".to_string(), serde_json::json!(cfg.show_lunar));
     map.insert("showMotto".to_string(), serde_json::json!(cfg.show_motto));
     map.insert("color".to_string(), serde_json::json!(cfg.color));
@@ -133,12 +139,18 @@ fn toggle_fullscreen(window: tauri::Window) -> Result<(), String> {
 
 #[tauri::command]
 fn get_available_themes() -> Vec<String> {
-    available_themes().into_iter().map(|s| s.to_string()).collect()
+    available_themes()
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 #[tauri::command]
 fn get_available_styles() -> Vec<String> {
-    available_styles().into_iter().map(|s| s.to_string()).collect()
+    available_styles()
+        .into_iter()
+        .map(|s| s.to_string())
+        .collect()
 }
 
 #[tauri::command]
@@ -230,7 +242,6 @@ fn main() {
                 handle_menu_event(app, event);
             });
 
-            
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {
                 // Set window size to half of screen (delayed to ensure window is ready)
@@ -243,11 +254,18 @@ fn main() {
                         let scale_factor = win.scale_factor().unwrap_or(1.0);
                         let half_width = screen_width / scale_factor / 2.0;
                         let half_height = screen_height / scale_factor / 2.0;
-                        log::info!("[WINDOW] Screen: {}x{}, scale: {}, window: {}x{}",
-                            screen_width, screen_height, scale_factor, half_width, half_height);
-                        let _ = win.set_size(tauri::Size::Logical(
-                            tauri::LogicalSize { width: half_width, height: half_height }
-                        ));
+                        log::info!(
+                            "[WINDOW] Screen: {}x{}, scale: {}, window: {}x{}",
+                            screen_width,
+                            screen_height,
+                            scale_factor,
+                            half_width,
+                            half_height
+                        );
+                        let _ = win.set_size(tauri::Size::Logical(tauri::LogicalSize {
+                            width: half_width,
+                            height: half_height,
+                        }));
                         let _ = win.center();
                     }
                 });

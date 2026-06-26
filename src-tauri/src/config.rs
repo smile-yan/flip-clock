@@ -70,8 +70,7 @@ pub fn available_time_formats() -> Vec<&'static str> {
 }
 
 fn get_config_dir() -> Result<PathBuf, String> {
-    let home_dir =
-        dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())?;
+    let home_dir = dirs::home_dir().ok_or_else(|| "Failed to get home directory".to_string())?;
     Ok(home_dir.join(".flip-clock"))
 }
 
@@ -90,8 +89,8 @@ pub fn load() -> Result<Config, String> {
     let data =
         fs::read_to_string(&config_path).map_err(|e| format!("Failed to read config: {}", e))?;
 
-    let mut cfg: Config = serde_json::from_str(&data)
-        .map_err(|e| format!("Failed to parse config: {}", e))?;
+    let mut cfg: Config =
+        serde_json::from_str(&data).map_err(|e| format!("Failed to parse config: {}", e))?;
 
     // Apply defaults for missing fields
     if cfg.theme.is_empty() {
