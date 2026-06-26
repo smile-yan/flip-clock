@@ -110,15 +110,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: ${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-*
-          path: src-tauri/dist
+          path: dist
 
       - name: Create universal DMG
         shell: bash
         run: |
           set -euo pipefail
           cd src-tauri
-          arm64_dmg=$(find dist -name "*darwin-aarch64*.dmg" | head -1)
-          amd64_dmg=$(find dist -name "*darwin-x86_64*.dmg" | head -1)
+          arm64_dmg=$(find ../dist -name "*darwin-aarch64*.dmg" | head -1)
+          amd64_dmg=$(find ../dist -name "*darwin-x86_64*.dmg" | head -1)
 
           echo "Arm64 DMG: ${arm64_dmg}"
           echo "Amd64 DMG: ${amd64_dmg}"
@@ -160,8 +160,8 @@ jobs:
           ln -s /Applications "${volume_dir}/Applications"
 
           # Create DMG
-          dmg_output="dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal/${APP_NAME}-${GITHUB_REF_NAME}-macos-universal.dmg"
-          mkdir -p "dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal"
+          dmg_output="../dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal/${APP_NAME}-${GITHUB_REF_NAME}-macos-universal.dmg"
+          mkdir -p "../dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal"
 
           hdiutil create \
             -volname "Flip Clock" \
@@ -178,7 +178,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-universal
-          path: src-tauri/dist/${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-universal/${{ env.APP_NAME }}-${{ github.ref_name }}-macos-universal.dmg
+          path: dist/${{ env.APP_NAME }}-${{ github.ref_name }}-darwin-universal/${{ env.APP_NAME }}-${{ github.ref_name }}-macos-universal.dmg
           if-no-files-found: error
 
   # ==================== Create Release ====================
