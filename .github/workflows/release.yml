@@ -12,6 +12,7 @@ permissions:
 env:
   APP_NAME: flip-clock
   TAURI_VERSION: '2'
+  RUST_TOOLCHAIN: '1.95.0'
 
 jobs:
   build:
@@ -39,7 +40,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@${{ env.RUST_TOOLCHAIN }}
         with:
           targets: ${{ matrix.platform }}-${{ matrix.arch }}
 
