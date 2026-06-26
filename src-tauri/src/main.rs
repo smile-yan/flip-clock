@@ -7,7 +7,7 @@ mod menu;
 use config::{available_styles, available_themes, available_time_formats, load, save};
 use menu::create_app_menu;
 use std::collections::HashMap;
-use tauri::{menu::MenuEvent, Manager, Runtime};
+use tauri::{menu::MenuEvent, Emitter, Manager, Runtime};
 
 #[tauri::command]
 fn get_config() -> Result<HashMap<String, serde_json::Value>, String> {
@@ -180,9 +180,9 @@ fn handle_menu_event<R: Runtime>(app: &tauri::AppHandle<R>, event: MenuEvent) {
             }
         }
         "check_updates" => {
-            // Show update dialog via eval
+            // Emit check-updates event to frontend
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval("alert('检查更新功能即将上线')");
+                let _ = window.emit("check-updates", ());
             }
         }
         "quit" => {
@@ -222,6 +222,7 @@ fn main() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             get_config,
             save_settings,

@@ -11,6 +11,7 @@
     "core:window:allow-minimize",
     "core:event:default",
     "shell:allow-open",
-    "core:menu:default"
+    "core:menu:default",
+    "updater:default"
   ]
 }

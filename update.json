@@ -1,0 +1,23 @@
+{
+  "version": "{{VERSION}}",
+  "notes": "Bug fixes and improvements",
+  "pub_date": "{{DATE}}",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-windows-x86_64.msi"
+    },
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-macos-arm64.dmg"
+    },
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-macos-x86_64.dmg"
+    },
+    "linux-x86_64": {
+      "signature": "",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-linux-amd64.deb"
+    }
+  }
+}
