@@ -69,29 +69,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Get absolute paths
+          WORK_DIR="$PWD"
           cd src-tauri
+          SRC_DIR="$PWD"
+          OUT_DIR="${SRC_DIR}/dist/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}"
+          mkdir -p "${OUT_DIR}"
+
           if [[ "${{ matrix.platform }}" == "windows" ]]; then
-            artifact_dir="target/x86_64-pc-windows-msvc/release/bundle/nsis"
-            out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-windows-x86_64"
-            mkdir -p "${out_dir}"
-            cp "${artifact_dir}"/*.exe "${out_dir}/" 2>/dev/null || true
+            cp "${SRC_DIR}/target/x86_64-pc-windows-msvc/release/bundle/nsis"/*.exe "${OUT_DIR}/" 2>/dev/null || true
           elif [[ "${{ matrix.platform }}" == "darwin" ]]; then
-            artifact_dir="target/${{ matrix.arch }}/release/bundle/dmg"
-            out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}"
-            mkdir -p "${out_dir}"
-            cp "${artifact_dir}"/*.dmg "${out_dir}/" 2>/dev/null || true
+            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle/dmg"/*.dmg "${OUT_DIR}/" 2>/dev/null || true
           else
             # Linux: copy all bundle formats
-            out_dir="dist/${APP_NAME}-${GITHUB_REF_NAME}-${{ matrix.platform }}-${{ matrix.arch }}"
-            mkdir -p "${out_dir}"
-            # Copy AppImage, deb, rpm
-            cp target/${{ matrix.arch }}/release/bundle/*/*.AppImage "${out_dir}/" 2>/dev/null || true
-            cp target/${{ matrix.arch }}/release/bundle/deb/*.deb "${out_dir}/" 2>/dev/null || true
-            cp target/${{ matrix.arch }}/release/bundle/rpm/*.rpm "${out_dir}/" 2>/dev/null || true
-            # Also copy the binary
-            cp target/${{ matrix.arch }}/release/${{ env.APP_NAME }} "${out_dir}/" 2>/dev/null || true
+            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle"/*/*.AppImage "${OUT_DIR}/" 2>/dev/null || true
+            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle/deb"/*.deb "${OUT_DIR}/" 2>/dev/null || true
+            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/bundle/rpm"/*.rpm "${OUT_DIR}/" 2>/dev/null || true
+            cp "${SRC_DIR}/target/${{ matrix.arch }}/release/${APP_NAME}" "${OUT_DIR}/" 2>/dev/null || true
           fi
-          ls -la "${out_dir}/"
+          ls -la "${OUT_DIR}/"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -120,9 +116,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          arm64_dmg=$(find src-tauri/dist -name "*darwin-aarch64*.dmg" | head -1)
-          amd64_dmg=$(find src-tauri/dist -name "*darwin-x86_64*.dmg" | head -1)
+          cd src-tauri
+          arm64_dmg=$(find dist -name "*darwin-aarch64*.dmg" | head -1)
+          amd64_dmg=$(find dist -name "*darwin-x86_64*.dmg" | head -1)
 
           echo "Arm64 DMG: ${arm64_dmg}"
           echo "Amd64 DMG: ${amd64_dmg}"
@@ -164,8 +160,8 @@ jobs:
           ln -s /Applications "${volume_dir}/Applications"
 
           # Create DMG
-          dmg_output="src-tauri/dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal/${APP_NAME}-${GITHUB_REF_NAME}-macos-universal.dmg"
-          mkdir -p "src-tauri/dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal"
+          dmg_output="dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal/${APP_NAME}-${GITHUB_REF_NAME}-macos-universal.dmg"
+          mkdir -p "dist/${APP_NAME}-${GITHUB_REF_NAME}-darwin-universal"
 
           hdiutil create \
             -volname "Flip Clock" \
