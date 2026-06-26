@@ -10,6 +10,9 @@ env:
   CARGO_TERM_COLOR: always
   RUST_TOOLCHAIN: '1.95.0'
   NODE_VERSION: '24'
+  # Enable sccache
+  SCCACHE_GHA_ENABLED: 'true'
+  RUSTC_WRAPPER: 'sccache'
 
 jobs:
   lint:
@@ -40,6 +43,9 @@ jobs:
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
+
+      - name: Cache sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
 
       - name: Check formatting
         run: |
@@ -78,6 +84,9 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           components: rustfmt, clippy
 
+      - name: Cache sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
+
       - name: Run tests
         run: |
           cargo test --manifest-path src-tauri/Cargo.toml
@@ -113,6 +122,9 @@ jobs:
         with:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.arch }}
+
+      - name: Cache sccache
+        uses: mozilla-actions/sccache-action@v0.0.6
 
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
