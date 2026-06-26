@@ -94,8 +94,10 @@ jobs:
         run: |
           cd bundle
           # Find DMG files
-          ARM64=$(find . -name "*aarch64*.dmg" | head -1)
-          AMD64=$(find . -name "*x64*.dmg" | head -1)
+          ARM64=$(find . -name "*aarch64*.dmg" 2>/dev/null | head -1)
+          AMD64=$(find . -name "*_x64.dmg" 2>/dev/null | head -1)
+          echo "Listing all DMG files:"
+          find . -name "*.dmg" 2>/dev/null
           echo "Arm64: $ARM64"
           echo "Amd64: $AMD64"
 
