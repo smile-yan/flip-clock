@@ -84,20 +84,41 @@ jobs:
           esac
 
           # Tauri default names embed the version from tauri.conf.json, not the
-          # git tag. Rewrite each known extension to flip-clock-v{tag}-{plat}-{arch}.{ext}.
-          for f in $(find . -type f); do
+          # git tag. Rewrite each known bundle output to flip-clock-v{tag}-{plat}-{arch}.{ext}.
+          # Only touch distributable artifacts at depth ≤ 2 — never recurse into
+          # .app bundles (they're directories whose internal layout is fixed by
+          # macOS) or inside installers.
+          rename_one() {
+            local f="$1"
+            local dir ext base new
             dir=$(dirname "$f")
-            ext="${f##*.}"
+            base=$(basename "$f")
+            # Detect "extension" by matching known distributable suffixes.
+            # Order matters: check compound suffixes before bare ones.
+            case "$base" in
+              *_x64-setup.exe)  ext="exe"; suffix="-setup" ;;
+              *.exe)            ext="exe"; suffix="" ;;
+              *.msi)            ext="msi"; suffix="" ;;
+              *.AppImage)       ext="AppImage"; suffix="" ;;
+              *.deb)            ext="deb"; suffix="" ;;
+              *.rpm)            ext="rpm"; suffix="" ;;
+              *.dmg)            ext="dmg"; suffix="" ;;
+              *.app)            ext="app"; suffix="" ;;
+              *)                return 0 ;;  # skip unrelated files
+            esac
             new="$APP-$TAG-$SHORT"
-            # For Windows NSIS we keep the "-setup" suffix
-            if [[ "$f" == *_x64-setup.exe ]]; then
-              mv "$f" "$dir/$new-setup.$ext"
-            else
-              mv "$f" "$dir/$new.$ext"
-            fi
-          done
+            mv "$f" "$dir/$new$suffix.$ext"
+          }
+
+          # -maxdepth 2 covers bundle/dmg/*.dmg, bundle/macos/*.app,
+          # bundle/nsis/*.exe, bundle/msi/*.msi, etc. — but never the
+          # internals of a .app directory.
+          while IFS= read -r f; do
+            rename_one "$f"
+          done < <(find . -maxdepth 2 \( -name '*.dmg' -o -name '*.app' -o -name '*.exe' -o -name '*.msi' -o -name '*.deb' -o -name '*.rpm' -o -name '*.AppImage' \))
+
           echo "--- after rename ---"
-          find . -type f
+          find . -maxdepth 2 -type f -o -maxdepth 2 -type d -name '*.app'
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
