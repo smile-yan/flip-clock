@@ -37,7 +37,6 @@ jobs:
 
       - name: Check formatting
         run: |
-          rustfmt --check src-tauri/src/**/*.rs || true
           cargo fmt --check --manifest-path src-tauri/Cargo.toml
 
       - name: Clippy
