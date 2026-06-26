@@ -64,6 +64,41 @@ jobs:
           cd src-tauri
           cargo tauri build --target ${{ matrix.arch }}
 
+      - name: Rename artifacts to v-tag format
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd src-tauri/target/${{ matrix.arch }}/release/bundle
+          TAG="${{ github.ref_name }}"   # e.g. v1.0.1 (already includes 'v')
+          APP="${{ env.APP_NAME }}"      # e.g. flip-clock
+          ARCH="${{ matrix.arch }}"
+
+          # Map arch to a human-friendly triple used in the filename
+          case "$ARCH" in
+            x86_64-unknown-linux-gnu)  SHORT=linux-x86_64  ;;
+            x86_64-pc-windows-msvc)    SHORT=windows-x86_64 ;;
+            aarch64-apple-darwin)      SHORT=macos-arm64    ;;
+            x86_64-apple-darwin)       SHORT=macos-x86_64   ;;
+            *)                         SHORT="$ARCH"        ;;
+          esac
+
+          # Tauri default names embed the version from tauri.conf.json, not the
+          # git tag. Rewrite each known extension to flip-clock-v{tag}-{plat}-{arch}.{ext}.
+          for f in $(find . -type f); do
+            dir=$(dirname "$f")
+            ext="${f##*.}"
+            new="$APP-$TAG-$SHORT"
+            # For Windows NSIS we keep the "-setup" suffix
+            if [[ "$f" == *_x64-setup.exe ]]; then
+              mv "$f" "$dir/$new-setup.$ext"
+            else
+              mv "$f" "$dir/$new.$ext"
+            fi
+          done
+          echo "--- after rename ---"
+          find . -type f
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -93,9 +128,10 @@ jobs:
       - name: Create universal DMG
         run: |
           cd bundle
-          # Find DMG files
-          ARM64=$(find . -name "*aarch64*.dmg" 2>/dev/null | head -1)
-          AMD64=$(find . -name "*_x64.dmg" 2>/dev/null | head -1)
+          # Find the two per-arch DMG files (renamed by the build job to
+          # flip-clock-v{tag}-macos-arm64.dmg / -macos-x86_64.dmg)
+          ARM64=$(find . -name "*macos-arm64.dmg" 2>/dev/null | head -1)
+          AMD64=$(find . -name "*macos-x86_64.dmg" 2>/dev/null | head -1)
           echo "Listing all DMG files:"
           find . -name "*.dmg" 2>/dev/null
           echo "Arm64: $ARM64"
