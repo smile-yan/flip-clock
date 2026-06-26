@@ -474,10 +474,6 @@ function showAboutDialog() {
     alert(aboutMessage);
 }
 
-function showCheckUpdatesDialog() {
-    alert('检查更新功能即将上线');
-}
-
 function closeSettings() {
     overlay.classList.remove('visible');
     modal.classList.remove('visible');
@@ -708,9 +704,9 @@ function bindGlobalEvents() {
             showAboutDialog();
         });
 
-        // Check updates from menu (simplified)
+        // Check updates from menu
         window.__TAURI__.event.listen('check-updates', () => {
-            showCheckUpdatesDialog();
+            checkForUpdates();
         });
     }
 }

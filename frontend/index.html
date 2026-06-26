@@ -675,21 +675,18 @@
                 }
             })
 
-            // Tauri menu event listeners
-            function setupTauriListeners() {
-                if (window.__TAURI__ && window.__TAURI__.event) {
-                    window.__TAURI__.event.listen('open-settings', function() {
-                        openSettings()
-                    })
-                    window.__TAURI__.event.listen('show-about', function() {
-                        openAbout()
-                    })
-                    window.__TAURI__.event.listen('check-updates', function() {
-                        checkForUpdates()
-                    })
-                }
+            // Listen for "check-updates" event from the native menu.
+            // update.js is loaded earlier in <head>, so window.checkForUpdates is available.
+            if (window.__TAURI__ && window.__TAURI__.event) {
+                window.__TAURI__.event.listen('check-updates', function() {
+                    if (typeof window.checkForUpdates === 'function') {
+                        window.checkForUpdates()
+                    } else {
+                        console.error('checkForUpdates is not defined; update.js may have failed to load')
+                    }
+                })
             }
-            setupTauriListeners()
+
         </script>
     </body>
 </html>

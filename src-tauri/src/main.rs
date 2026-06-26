@@ -146,6 +146,13 @@ fn get_available_themes() -> Vec<String> {
 }
 
 #[tauri::command]
+fn get_release_url() -> String {
+    // Configured in tauri.conf.json under "update.releaseUrl".
+    // Hardcoded fallback to keep the command self-contained.
+    "https://github.com/smile-yan/flip-clock/releases/latest".to_string()
+}
+
+#[tauri::command]
 fn get_available_styles() -> Vec<String> {
     available_styles()
         .into_iter()
@@ -229,7 +236,8 @@ fn main() {
             toggle_fullscreen,
             get_available_themes,
             get_available_styles,
-            get_available_time_formats
+            get_available_time_formats,
+            get_release_url
         ])
         .setup(|app| {
             log::info!("App setup complete");
@@ -245,6 +253,8 @@ fn main() {
 
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {
+
+
                 // Set window size to half of screen (delayed to ensure window is ready)
                 let win = window.clone();
                 std::thread::spawn(move || {

@@ -771,6 +771,45 @@ body {
     white-space: pre-line;
 }
 
+/* "正在检查更新…" 状态：旋转图标 + 文本并排 */
+.update-checking {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 20px 0;
+    min-height: 24px;
+}
+
+.update-checking p {
+    margin: 0;
+    color: var(--modal-label);
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+.spinner {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(90, 200, 250, 0.25);
+    border-top-color: #007aff;
+    border-radius: 50%;
+    animation: update-spin 0.8s linear infinite;
+}
+
+@keyframes update-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes update-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.55; }
+}
+
+.update-checking p {
+    animation: update-pulse 1.4s ease-in-out infinite;
+}
+
 /* 进度条 */
 .progress-bar {
     width: 100%;

@@ -7,6 +7,7 @@
     "frontendDist": "../frontend"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "翻转时钟",
@@ -35,6 +36,14 @@
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": ""
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/smile-yan/flip-clock/releases/latest/download/update.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEY5NzMwODNBREIwQUU4RjYKUldUMjZBcmJPZ2h6K1NmZVg4cVFoRE9ZZzc2QjFvNlVvS1hjWjlydnZBSVljSGpNczZQM1Q5a24K"
     }
   }
 }
