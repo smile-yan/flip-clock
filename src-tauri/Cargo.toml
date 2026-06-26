@@ -2,7 +2,7 @@
 name = "flip-clock"
 version = "1.0.0"
 description = "A minimalist, open-source desktop flip clock"
-authors = ["flip-clock"]
+authors = ["smileyan"]
 edition = "2021"
 
 [build-dependencies]
