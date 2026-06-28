@@ -686,6 +686,21 @@ function bindGlobalEvents() {
             }
         }
 
+        // Escape - Exit fullscreen (so users aren't stuck once the native menu is hidden)
+        if (e.key === 'Escape') {
+            try {
+                if (window.__TAURI__?.window?.getCurrentWindow) {
+                    const isFs = await window.__TAURI__.window.getCurrentWindow().isFullscreen();
+                    if (isFs) {
+                        e.preventDefault();
+                        await window.__TAURI__.core.invoke('toggle_fullscreen');
+                    }
+                }
+            } catch (err) {
+                // Ignore — Escape may not be wired in every platform.
+            }
+        }
+
         // Ctrl/Cmd + , - Open settings
         if ((e.ctrlKey || e.metaKey) && e.key === ',') {
             e.preventDefault();

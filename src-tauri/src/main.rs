@@ -244,7 +244,7 @@ fn main() {
 
             // Create and set the application menu
             let app_menu = create_app_menu(app.handle())?;
-            app.set_menu(app_menu)?;
+            app.set_menu(app_menu.clone())?;
 
             // Handle menu events
             app.on_menu_event(|app, event| {
@@ -279,6 +279,15 @@ fn main() {
                     }
                 });
 
+                // Track fullscreen transitions so we can hide/restore the native menu on Windows.
+                // On Windows the menu bar is part of the window chrome, so it stays visible
+                // unless we explicitly remove it while in fullscreen.
+                let menu_for_fullscreen = app_menu.clone();
+                let last_fullscreen = std::sync::Arc::new(std::sync::Mutex::new(false));
+                let win_for_fs = window.clone();
+                #[allow(unused_variables)]
+                let menu_for_fs = menu_for_fullscreen.clone();
+
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { .. } = event {
                         log::info!("Window close requested, saving config");
@@ -286,6 +295,28 @@ fn main() {
                             if let Err(e) = save(&cfg) {
                                 log::error!("Failed to save config on close: {}", e);
                             }
+                        }
+                        return;
+                    }
+
+                    // `Resized` fires on both enter- and exit-fullscreen on Windows.
+                    // We check the actual fullscreen state (rather than parsing the size)
+                    // because Win11's "maximize" produces the same monitor-sized Resized.
+                    if matches!(event, tauri::WindowEvent::Resized(_)) {
+                        let now_fullscreen = win_for_fs.is_fullscreen().unwrap_or(false);
+                        let mut last = last_fullscreen.lock().unwrap();
+                        if now_fullscreen != *last {
+                            #[cfg(target_os = "windows")]
+                            {
+                                if now_fullscreen {
+                                    log::info!("Hiding menu bar for fullscreen");
+                                    let _ = win_for_fs.remove_menu();
+                                } else {
+                                    log::info!("Restoring menu bar after fullscreen");
+                                    let _ = win_for_fs.set_menu(menu_for_fs.clone());
+                                }
+                            }
+                            *last = now_fullscreen;
                         }
                     }
                 });
