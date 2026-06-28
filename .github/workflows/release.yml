@@ -12,6 +12,7 @@ permissions:
 env:
   APP_NAME: flip-clock
   RUST_TOOLCHAIN: '1.95.0'
+  NODE_VERSION: '24'
 
 jobs:
   build:
@@ -37,6 +38,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@v1
