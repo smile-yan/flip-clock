@@ -185,13 +185,12 @@ jobs:
 
           ln -sf /Applications /tmp/universal/
 
-          # Create DMG
+          # Create DMG (APFS, no HFS+/scrub — those legacy flags trip the
+          # macOS 26 runner with `hdiutil: create failed - Resource busy`.)
           hdiutil create \
             -volname "Flip Clock" \
             -srcfolder /tmp/universal \
             -ov -format UDZO \
-            -fs HFS+ \
-            -scrub \
             ../flip-clock-${{ github.ref_name }}-macos-universal.dmg
 
       - name: Upload
