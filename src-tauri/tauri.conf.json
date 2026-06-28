@@ -52,12 +52,12 @@
     "linux": {
       "deb": {
         "files": {
-          "/usr/share/icons/hicolor/scalable/apps/cn.smileyan.app.svg": "../icons/icon.svg"
+          "/usr/share/icons/hicolor/scalable/apps/cn.smileyan.app.svg": "icons/icon.svg"
         }
       },
       "appimage": {
         "files": {
-          "/usr/share/icons/hicolor/scalable/apps/cn.smileyan.app.svg": "../icons/icon.svg"
+          "/usr/share/icons/hicolor/scalable/apps/cn.smileyan.app.svg": "icons/icon.svg"
         }
       }
     }
