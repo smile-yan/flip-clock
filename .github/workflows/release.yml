@@ -65,6 +65,42 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli
 
+      # Verify the committed icon.ico has matching header width/height on every
+      # layer — guards against the regression where a 512-px PNG payload was
+      # embedded under a 256-px ICO header, which Windows renders by trusting
+      # the header and produces a blurry taskbar icon.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Pillow
+        run: pip install pillow
+
+      - name: Verify icon.ico layer sizes
+        run: |
+          python3 - <<'PY'
+          import struct, io, sys
+          from PIL import Image
+          with open('src-tauri/icons/icon.ico', 'rb') as f:
+              data = f.read()
+          _, _, count = struct.unpack('<HHH', data[:6])
+          bad = []
+          sizes = []
+          for i in range(count):
+              w, _h = struct.unpack('<BB', data[6 + i*16 : 8 + i*16])
+              psz, poff = struct.unpack('<II', data[14 + i*16 : 22 + i*16])
+              hd = 256 if w == 0 else w
+              sizes.append(hd)
+              actual = Image.open(io.BytesIO(data[poff:poff+psz])).size
+              if actual != (hd, hd):
+                  bad.append((i, hd, actual))
+          if bad:
+              print('ICO header/payload mismatch:', bad, file=sys.stderr)
+              sys.exit(1)
+          print(f'OK: {count} layers, all header==payload, sizes={sorted(sizes, reverse=True)}')
+          PY
+
       - name: Build
         run: |
           cd src-tauri
