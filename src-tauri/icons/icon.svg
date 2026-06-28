@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Vectorized from icon.png (1024x1024 master). Rounded-square body, inner split-flap panel, "12" glyph. -->
+  <defs>
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a3f4b"/>
+      <stop offset="1" stop-color="#1d2027"/>
+    </linearGradient>
+    <linearGradient id="panelGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2e36"/>
+      <stop offset="1" stop-color="#16181d"/>
+    </linearGradient>
+    <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5e6776" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#3a4150" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="highlight" cx="0.78" cy="0.18" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Outer rounded square -->
+  <rect x="64" y="64" width="896" height="896" rx="190" ry="190" fill="url(#bodyGrad)"/>
+
+  <!-- Hinge pip top right -->
+  <circle cx="816" cy="200" r="34" fill="#9be3d3"/>
+
+  <!-- Inner panel (split-flap) -->
+  <rect x="200" y="232" width="624" height="560" rx="58" ry="58" fill="url(#panelGrad)"/>
+
+  <!-- Split line across middle of panel -->
+  <rect x="200" y="508" width="624" height="8" fill="#0c0d11"/>
+
+  <!-- Side knobs (mounting dots on each side of the panel) -->
+  <circle cx="206" cy="512" r="22" fill="#0c0d11"/>
+  <circle cx="206" cy="512" r="14" fill="#262a32"/>
+  <circle cx="818" cy="512" r="22" fill="#0c0d11"/>
+  <circle cx="818" cy="512" r="14" fill="#262a32"/>
+
+  <!-- "12" glyph (upper half) -->
+  <g fill="#f6e7c5" font-family="Helvetica, Arial, sans-serif" font-weight="700" text-anchor="middle">
+    <text x="512" y="540" font-size="360">12</text>
+  </g>
+
+  <!-- Glass overlay highlight -->
+  <rect x="200" y="232" width="624" height="560" rx="58" ry="58" fill="url(#glassGrad)"/>
+  <rect x="64" y="64" width="896" height="896" rx="190" ry="190" fill="url(#highlight)"/>
+
+  <!-- Inner panel stroke for crisp edge -->
+  <rect x="200" y="232" width="624" height="560" rx="58" ry="58" fill="none" stroke="#0a0b0e" stroke-width="6"/>
+</svg>

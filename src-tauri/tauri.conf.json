@@ -30,12 +30,36 @@
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
-      "icons/icon.ico"
+      "icons/icon.ico",
+      "icons/linux-16.png",
+      "icons/linux-22.png",
+      "icons/linux-24.png",
+      "icons/linux-32.png",
+      "icons/linux-48.png",
+      "icons/linux-64.png",
+      "icons/linux-128.png",
+      "icons/linux-256.png",
+      "icons/linux-512.png"
+    ],
+    "resources": [
+      "icons/icon.svg"
     ],
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": ""
+    },
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/icons/hicolor/scalable/apps/cn.smileyan.app.svg": "../icons/icon.svg"
+        }
+      },
+      "appimage": {
+        "files": {
+          "/usr/share/icons/hicolor/scalable/apps/cn.smileyan.app.svg": "../icons/icon.svg"
+        }
+      }
     }
   },
   "plugins": {
