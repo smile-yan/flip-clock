@@ -12,6 +12,7 @@
     "core:event:default",
     "shell:allow-open",
     "core:menu:default",
+    "os:default",
     "updater:default"
   ]
 }
