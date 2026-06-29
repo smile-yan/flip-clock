@@ -168,6 +168,58 @@ fn get_available_time_formats() -> Vec<String> {
         .collect()
 }
 
+/// Apply the "show in dock / taskbar" preference. Per-platform:
+/// - macOS: flips `NSApp.activationPolicy` via Tauri's `set_dock_visibility`
+///   (Regular ↔ Accessory), which also hides/reveals the window.
+/// - Windows: toggles `WS_EX_APPWINDOW` for the main window via
+///   `Window::set_skip_taskbar`.
+/// - Linux: no cross-desktop API in Tauri core; we persist the preference
+///   anyway and log a warning. (A status-notifier / tray icon would be the
+///   Linux-friendly way to recover the window when the launcher entry is
+///   suppressed — out of scope for this setting.)
+fn apply_dock_visibility<R: Runtime>(
+    app: &tauri::AppHandle<R>,
+    visible: bool,
+) -> Result<(), String> {
+    log::info!("apply_dock_visibility: visible={}", visible);
+
+    #[cfg(target_os = "macos")]
+    {
+        app.set_dock_visibility(visible)
+            .map_err(|e| format!("Failed to set macOS dock visibility: {}", e))?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(window) = app.get_webview_window("main") {
+            window
+                .set_skip_taskbar(!visible)
+                .map_err(|e| format!("Failed to set Windows skip_taskbar: {}", e))?;
+        } else {
+            log::warn!("apply_dock_visibility: 'main' window not found");
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        log::warn!(
+            "Linux: no cross-desktop 'hide from dock/taskbar' API in Tauri core. \
+             The preference is saved and applied on macOS/Windows."
+        );
+        let _ = visible;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+fn set_dock_visibility<R: Runtime>(
+    app: tauri::AppHandle<R>,
+    visible: bool,
+) -> Result<(), String> {
+    apply_dock_visibility(&app, visible)
+}
+
 /// Handle menu events from the native menu bar
 fn handle_menu_event<R: Runtime>(app: &tauri::AppHandle<R>, event: MenuEvent) {
     let id = event.id().as_ref();
@@ -238,7 +290,8 @@ fn main() {
             get_available_themes,
             get_available_styles,
             get_available_time_formats,
-            get_release_url
+            get_release_url,
+            set_dock_visibility
         ])
         .setup(|app| {
             log::info!("App setup complete");
@@ -251,6 +304,15 @@ fn main() {
             app.on_menu_event(|app, event| {
                 handle_menu_event(app, event);
             });
+
+            // Apply the persisted "show in dock / taskbar" preference now, so
+            // users who previously disabled the icon don't see a flash of the
+            // dock/taskbar entry before the setting kicks in.
+            if let Ok(cfg) = load() {
+                if let Err(e) = apply_dock_visibility(&app.handle(), cfg.show_in_dock) {
+                    log::error!("Failed to apply initial dock visibility: {}", e);
+                }
+            }
 
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {

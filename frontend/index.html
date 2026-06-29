@@ -136,6 +136,11 @@
                         <span class="check-box"></span>
                         <span class="check-text">座右铭</span>
                     </label>
+                    <label class="check-line">
+                        <input type="checkbox" id="showInDockCheck">
+                        <span class="check-box"></span>
+                        <span class="check-text">桌面图标（Dock/任务栏）</span>
+                    </label>
                 </div>
             </section>
 
@@ -161,6 +166,8 @@
                 show_seconds: true,
                 show_lunar: false,
                 show_motto: true,
+                // 桌面图标（Dock/任务栏）默认显示，用户可在「显示」中关闭。
+                show_in_dock: true,
                 color: ''
             }
 
@@ -218,6 +225,7 @@
                 setCheckbox('showDateCheck', currentConfig.show_date)
                 setCheckbox('showLunarCheck', currentConfig.show_lunar)
                 setCheckbox('showMottoCheck', currentConfig.show_motto)
+                setCheckbox('showInDockCheck', currentConfig.show_in_dock)
                 setText('mottoInput', currentConfig.motto)
 
                 overlay.classList.add('visible')
@@ -266,7 +274,7 @@
                 const timeFormat = document.getElementById('timeFormatSelect').value
                 return {
                     motto: document.getElementById('mottoInput').value || '',
-                    show_in_dock: !!currentConfig.show_in_dock,
+                    show_in_dock: !!document.getElementById('showInDockCheck').checked,
                     theme: currentConfig.theme,
                     style: style,
                     time_format: timeFormat,
@@ -451,16 +459,27 @@
                 })
 
                 // 显示复选框
-                ;['showDateCheck', 'showLunarCheck', 'showMottoCheck'].forEach(function (id) {
+                ;['showDateCheck', 'showLunarCheck', 'showMottoCheck', 'showInDockCheck'].forEach(function (id) {
                     const el = document.getElementById(id)
                     el.addEventListener('change', function () {
                         const map = {
                             showDateCheck: 'show_date',
                             showLunarCheck: 'show_lunar',
-                            showMottoCheck: 'show_motto'
+                            showMottoCheck: 'show_motto',
+                            showInDockCheck: 'show_in_dock'
                         }
                         currentConfig[map[id]] = this.checked
-                        applyDisplays()
+                        if (id === 'showInDockCheck') {
+                            // 立即生效：调后端命令切换 Dock/任务栏图标。
+                            if (window.__TAURI__ && window.__TAURI__.core) {
+                                window.__TAURI__.core.invoke('set_dock_visibility', { visible: this.checked })
+                                    .catch(function (err) {
+                                        console.error('[frontend] set_dock_visibility failed:', err)
+                                    })
+                            }
+                        } else {
+                            applyDisplays()
+                        }
                         scheduleSave()
                     })
                 })

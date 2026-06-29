@@ -38,7 +38,9 @@ impl Default for Config {
             height: 300,
             x: -1,
             y: -1,
-            show_in_dock: false,
+            // Default to `true` — the dock/taskbar icon is shown out of the box.
+            // Users who want a background clock can flip this off in Settings.
+            show_in_dock: true,
             theme: "dark".to_string(),
             style: "with-seconds".to_string(),
             time_format: "24h".to_string(),

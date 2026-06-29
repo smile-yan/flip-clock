@@ -21,6 +21,7 @@
 - **Lunar Calendar (农历)** - Display Chinese lunar date
 - **Custom Motto** - Add your own daily quote
 - **Native Fullscreen** - Real fullscreen support on macOS
+- **Hide Desktop Icon** - Run as background app with no dock/taskbar entry (see [Background Mode](#background-mode))
 - **Local-first** - No cloud, no telemetry
 
 ## Tech Stack
@@ -77,9 +78,12 @@ Default config:
   "showDate": true,
   "showSeconds": true,
   "showLunar": false,
-  "showMotto": true
+  "showMotto": true,
+  "showInDock": true
 }
 ```
+
+The `showInDock` toggle controls whether the app shows a dock/taskbar icon. See [Background Mode](#background-mode) for details.
 
 ## Keyboard Shortcuts
 
@@ -123,6 +127,28 @@ flip-clock/
 | `ocean` | Teal ocean waves |
 | `rose` | Soft pink tones |
 | `slate` | Neutral gray |
+
+## Background Mode
+
+Toggle **"桌面图标 (Dock/任务栏)"** in Settings to drop the dock/taskbar icon and run as a background clock. The preference is persisted to `config.json` as `showInDock` and applied at startup so users who disabled the icon never see a flash of the entry on launch.
+
+How it actually behaves per platform (driven by the underlying OS API Tauri's `set_dock_visibility` / `set_skip_taskbar` wraps):
+
+| Platform | Tauri API | What changes |
+|----------|-----------|--------------|
+| **macOS** | `AppHandle::set_dock_visibility(false)` → `NSApp.activationPolicy = .accessory` + `NSApp.hide(nil)` | The dock icon is removed **and** the window itself is hidden (standard macOS accessory-app behaviour). Re-enable the toggle to bring both back — you can still reach Settings via `⌘,` while the window is gone. |
+| **Windows** | `Window::set_skip_taskbar(true)` → toggles `WS_EX_APPWINDOW` on the main window | Only the **taskbar entry** is removed; the window stays visible on the desktop and can still be alt-tabbed / interacted with. Reach Settings via `Ctrl+,` to toggle it back on. |
+| **Linux** | _None_ | The preference is **saved and respected** on macOS/Windows, but on Linux it has no visible effect. See [Known Limitations](#known-limitations). |
+
+Toggling the checkbox in Settings invokes `set_dock_visibility` immediately, so the change is live — there's no need to restart.
+
+## Known Limitations
+
+- **Linux "Hide Desktop Icon" is a no-op.** Tauri 2's core runtime does not expose a cross-desktop API for suppressing the launcher / taskbar entry. GNOME's dash-to-dock, KDE's plasmashell, XFCE's xfce4-panel each use different D-Bus interfaces (`com.canonical.Unity.LauncherEntry`, `org.kde.plasma`, etc.), and no single call suppresses all of them. The reliable Linux-compatible fix is a system-tray icon with a "Show clock" menu — tracked as a follow-up, out of scope for the `showInDock` setting.
+
+- **On Windows, only the taskbar entry is hidden** — the window itself remains visible. This is the closest equivalent Tauri exposes; it matches the macOS intent (no dock clutter) without the "where did my window go?" problem on a platform that has no menu-bar surface to recover from.
+
+- **On macOS, hiding the icon also hides the window** (because Tauri calls `NSApp.hide(nil)` as part of `set_dock_visibility(false)`). To get the window back, open Settings via `⌘,` and toggle "桌面图标" back on.
 
 ## CI/CD
 
