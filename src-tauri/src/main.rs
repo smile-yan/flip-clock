@@ -213,10 +213,7 @@ fn apply_dock_visibility<R: Runtime>(
 }
 
 #[tauri::command]
-fn set_dock_visibility<R: Runtime>(
-    app: tauri::AppHandle<R>,
-    visible: bool,
-) -> Result<(), String> {
+fn set_dock_visibility<R: Runtime>(app: tauri::AppHandle<R>, visible: bool) -> Result<(), String> {
     apply_dock_visibility(&app, visible)
 }
 
