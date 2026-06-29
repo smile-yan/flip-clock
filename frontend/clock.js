@@ -672,9 +672,35 @@ function bindGlobalEvents() {
         }
     });
 
+    // Resolve the host OS once and cache the resulting string on a closure
+    // variable. Used only to gate Ctrl+Alt+F — F11, Escape, and Ctrl/Cmd+,
+    // stay global so we don't regress macOS muscle memory.
+    let resolvePlatform;
+    const platformPromise = new Promise((resolve) => {
+        resolvePlatform = resolve;
+    });
+    try {
+        const tauriPlatform = window.__TAURI__?.os?.platform?.();
+        if (tauriPlatform && typeof tauriPlatform.then === 'function') {
+            tauriPlatform.then(resolvePlatform).catch(() => resolvePlatform('unknown'));
+        } else {
+            resolvePlatform(tauriPlatform || 'unknown');
+        }
+    } catch (_) {
+        resolvePlatform('unknown');
+    }
+    // If Tauri didn't tell us, sniff the user agent so a non-Tauri browser
+    // preview (e.g. opening clock.html locally) still classifies Mac correctly.
+    platformPromise.then((p) => {
+        if (p === 'unknown' && typeof navigator !== 'undefined') {
+            const ua = navigator.platform || navigator.userAgent || '';
+            if (/Mac|iPhone|iPad/.test(ua)) resolvePlatform('darwin');
+        }
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', async (e) => {
-        // F11 - Toggle fullscreen
+        // F11 - Toggle fullscreen (kept for macOS; also works as a fallback on Win/Linux)
         if (e.key === 'F11') {
             e.preventDefault();
             try {
@@ -683,6 +709,27 @@ function bindGlobalEvents() {
                 }
             } catch (err) {
                 console.error('[frontend] Toggle fullscreen failed:', err);
+            }
+        }
+
+        // Ctrl + Alt + F - Toggle fullscreen (Windows / Linux only).
+        // On macOS this branch is intentionally skipped so the existing F11
+        // path stays the sole fullscreen toggle — we don't override the
+        // platform's native fullscreen key.
+        // We only check `e.ctrlKey && e.altKey && !e.metaKey`; matching both
+        // 'f' and 'F' guards against a stray Shift modifier swallowing the
+        // event on some keyboard layouts.
+        const platform = await platformPromise;
+        if (platform === 'windows' || platform === 'linux') {
+            if (e.ctrlKey && e.altKey && !e.metaKey && (e.key === 'f' || e.key === 'F')) {
+                e.preventDefault();
+                try {
+                    if (window.__TAURI__) {
+                        await window.__TAURI__.core.invoke('toggle_fullscreen');
+                    }
+                } catch (err) {
+                    console.error('[frontend] Toggle fullscreen (Ctrl+Alt+F) failed:', err);
+                }
             }
         }
 
