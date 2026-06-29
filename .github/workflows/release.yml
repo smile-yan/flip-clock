@@ -79,8 +79,11 @@ jobs:
 
       - name: Verify icon.ico layer sizes
         run: |
-          python3 - <<'PY'
-          import struct, io, sys
+          # Write script to a temp file first — required because Windows runners
+          # use PowerShell (pwsh) which does not support bash/zsh heredoc syntax.
+          python3 -c "
+          import os, sys
+          script = '''import struct, io, sys
           from PIL import Image
           with open('src-tauri/icons/icon.ico', 'rb') as f:
               data = f.read()
@@ -99,7 +102,12 @@ jobs:
               print('ICO header/payload mismatch:', bad, file=sys.stderr)
               sys.exit(1)
           print(f'OK: {count} layers, all header==payload, sizes={sorted(sizes, reverse=True)}')
-          PY
+          '''
+          path = os.path.join(os.environ.get('TEMP', '/tmp'), 'verify_ico.py')
+          with open(path, 'w') as f:
+              f.write(script)
+          os.execv(sys.executable, [sys.executable, path])
+          "
 
       - name: Build
         run: |
