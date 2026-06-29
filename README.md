@@ -150,6 +150,8 @@ Toggling the checkbox in Settings invokes `set_dock_visibility` immediately, so 
 
 - **On macOS, hiding the icon also hides the window** (because Tauri calls `NSApp.hide(nil)` as part of `set_dock_visibility(false)`). To get the window back, open Settings via `⌘,` and toggle "桌面图标" back on.
 
+- **One-shot config migration on upgrade to v1.0.9.** Older releases wrote `showInDock: false` to `config.json` as a dead-field default (the field was never wired to runtime before). If every such legacy value were honored on first v1.0.9 launch, every existing user would silently lose the dock icon — and on macOS, the window itself — without ever touching the setting. To prevent that, the first launch of v1.0.9+ detects configs with `version < 2`, resets `showInDock` to `true`, and re-saves the file with the new schema marker. Users who later flip the toggle off in Settings are unaffected — only the legacy dead-field value is migrated.
+
 ## CI/CD
 
 This project uses GitHub Actions for continuous integration and release automation.
