@@ -206,7 +206,9 @@ fn apply_dock_visibility<R: Runtime>(
             "Linux: no cross-desktop 'hide from dock/taskbar' API in Tauri core. \
              The preference is saved and applied on macOS/Windows."
         );
-        let _ = visible;
+        // Both params are unused on Linux — silence the `unused_variables` lint
+        // that CI's `-D warnings` turns into an error.
+        let _ = (app, visible);
     }
 
     Ok(())
@@ -306,7 +308,7 @@ fn main() {
             // users who previously disabled the icon don't see a flash of the
             // dock/taskbar entry before the setting kicks in.
             if let Ok(cfg) = load() {
-                if let Err(e) = apply_dock_visibility(&app.handle(), cfg.show_in_dock) {
+                if let Err(e) = apply_dock_visibility(app.handle(), cfg.show_in_dock) {
                     log::error!("Failed to apply initial dock visibility: {}", e);
                 }
             }
