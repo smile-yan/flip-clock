@@ -136,7 +136,7 @@ How it actually behaves per platform (driven by the underlying OS API Tauri's `s
 
 | Platform | Tauri API | What changes |
 |----------|-----------|--------------|
-| **macOS** | `AppHandle::set_dock_visibility(false)` → `NSApp.activationPolicy = .accessory` + `NSApp.hide(nil)` | The dock icon is removed **and** the window itself is hidden (standard macOS accessory-app behaviour). Re-enable the toggle to bring both back — you can still reach Settings via `⌘,` while the window is gone. |
+| **macOS** | `AppHandle::set_dock_visibility(false)` → `TransformProcessType(...kProcessTransformToUIElementApplication)` (verified via `lsappinfo type` field flipping between `"Foreground"` and `"UIElement"`) | The dock icon is removed and the process becomes a **UIElement**. The clock **window itself stays on the desktop** — confirmed by screenshot. Tauri does **not** call `NSApp.hide(nil)` in this path. The app's menu-bar items (`翻转时钟` / `窗口`) are still registered with the system, but they're only visible when the window has actual focus (click it first). |
 | **Windows** | `Window::set_skip_taskbar(true)` → toggles `WS_EX_APPWINDOW` on the main window | Only the **taskbar entry** is removed; the window stays visible on the desktop and can still be alt-tabbed / interacted with. Reach Settings via `Ctrl+,` to toggle it back on. |
 | **Linux** | _None_ | The preference is **saved and respected** on macOS/Windows, but on Linux it has no visible effect. See [Known Limitations](#known-limitations). |
 
@@ -148,9 +148,11 @@ Toggling the checkbox in Settings invokes `set_dock_visibility` immediately, so 
 
 - **On Windows, only the taskbar entry is hidden** — the window itself remains visible. This is the closest equivalent Tauri exposes; it matches the macOS intent (no dock clutter) without the "where did my window go?" problem on a platform that has no menu-bar surface to recover from.
 
-- **On macOS, hiding the icon also hides the window** (because Tauri calls `NSApp.hide(nil)` as part of `set_dock_visibility(false)`). To get the window back, open Settings via `⌘,` and toggle "桌面图标" back on.
+- **On macOS, the window *stays on screen* after toggling off** (verified in v1.0.9 testing). Tauri's `set_dock_visibility(false)` only calls `TransformProcessType(..., kProcessTransformToUIElementApplication)` — it does **not** call `NSApp.hide(nil)`. So with the dock icon gone, the clock window is still right where you left it. That makes the recovery path easy: click the visible window to focus it, then use the menu bar (the `翻转时钟` → `设置` item) to flip the toggle back on. If for some reason the window is also off-screen, you can edit `~/.flip-clock/config.json` by hand — set `"showInDock": true` and relaunch.
 
-- **One-shot config migration on upgrade to v1.0.9.** Older releases wrote `showInDock: false` to `config.json` as a dead-field default (the field was never wired to runtime before). If every such legacy value were honored on first v1.0.9 launch, every existing user would silently lose the dock icon — and on macOS, the window itself — without ever touching the setting. To prevent that, the first launch of v1.0.9+ detects configs with `version < 2`, resets `showInDock` to `true`, and re-saves the file with the new schema marker. Users who later flip the toggle off in Settings are unaffected — only the legacy dead-field value is migrated.
+- **There's a 1-second debounce on the macOS path** (in tao `set_dock_hide`). Hiding the dock icon immediately after showing it again is a no-op for 1 s, because rapid dock-show/dock-hide transitions can leave stray icons. So if you toggle the setting on then off in quick succession, the second `off` may appear unresponsive — wait a second and try again.
+
+- **One-shot config migration on upgrade to v1.0.9.** Older releases wrote `showInDock: false` to `config.json` as a dead-field default (the field was never wired to runtime before). If every such legacy value were honored on first v1.0.9 launch, every existing user would silently lose the dock icon — without ever touching the setting. To prevent that, the first launch of v1.0.9+ detects configs with `version < 2`, resets `showInDock` to `true`, and re-saves the file with the new schema marker. Users who later flip the toggle off in Settings are unaffected — only the legacy dead-field value is migrated.
 
 ## CI/CD
 
