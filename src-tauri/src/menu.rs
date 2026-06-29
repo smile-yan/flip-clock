@@ -38,8 +38,11 @@ pub fn create_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>>
     // webview keydown events do not conflict because the native layer
     // consumes the accelerator first, and the webview's listener is a
     // fallback for environments without the menu (e.g. dev preview).
-    let fullscreen_accelerator =
-        if cfg!(target_os = "macos") { "Cmd+Ctrl+F" } else { "Ctrl+Alt+F" };
+    let fullscreen_accelerator = if cfg!(target_os = "macos") {
+        "Cmd+Ctrl+F"
+    } else {
+        "Ctrl+Alt+F"
+    };
 
     let window_menu = SubmenuBuilder::new(app, "窗口")
         .item(&PredefinedMenuItem::minimize(app, None)?)
