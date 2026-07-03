@@ -247,11 +247,20 @@ jobs:
 
           hdiutil attach "$AMD64_DMG" -readonly -nobrowse -mountpoint /tmp/amd64-app
           AMD64_APP=$(ls -d /tmp/amd64-app/*.app 2>/dev/null | head -1)
+
+          # Copy the amd64 binary to a stable path BEFORE we detach the
+          # DMG. Once the mount is gone, $AMD64_APP/Contents/MacOS/flip-clock
+          # becomes a stale path on a dead mount, and `lipo -create` would
+          # silently (or noisily — depending on the lipo version) fail with
+          # "file not found". `/tmp` survives the detach, so this is the
+          # right place to materialize the input file.
+          AMD64_BIN_COPY="/tmp/amd64-flip-clock-bin"
+          cp "$AMD64_APP/Contents/MacOS/flip-clock" "$AMD64_BIN_COPY"
           hdiutil detach /tmp/amd64-app
 
           UNI_APP="/tmp/universal/$(basename "$AMD64_APP")"
           ARM64_BIN="$UNI_APP/Contents/MacOS/flip-clock"
-          AMD64_BIN="$AMD64_APP/Contents/MacOS/flip-clock"
+          AMD64_BIN="$AMD64_BIN_COPY"
 
           if [ ! -f "$AMD64_BIN" ]; then
             echo "Error: amd64 binary not found at $AMD64_BIN"
