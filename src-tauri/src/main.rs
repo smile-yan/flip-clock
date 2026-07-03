@@ -152,6 +152,15 @@ fn get_release_url() -> String {
     "https://github.com/smile-yan/flip-clock/releases/latest".to_string()
 }
 
+/// Return the running app's version string (from tauri.conf.json). The
+/// frontend's About dialog uses this so the displayed version tracks
+/// releases automatically — no hard-coded "v1.0.0" string to forget to
+/// bump on every release.
+#[tauri::command]
+fn get_app_version<R: Runtime>(app: tauri::AppHandle<R>) -> String {
+    app.package_info().version.to_string()
+}
+
 #[tauri::command]
 fn get_available_styles() -> Vec<String> {
     available_styles()
@@ -290,6 +299,7 @@ fn main() {
             get_available_styles,
             get_available_time_formats,
             get_release_url,
+            get_app_version,
             set_dock_visibility
         ])
         .setup(|app| {
@@ -344,11 +354,15 @@ fn main() {
                 // Track fullscreen transitions so we can hide/restore the native menu on Windows.
                 // On Windows the menu bar is part of the window chrome, so it stays visible
                 // unless we explicitly remove it while in fullscreen.
-                let menu_for_fullscreen = app_menu.clone();
+                //
+                // `menu_for_fs` is only used inside the `#[cfg(target_os = "windows")]`
+                // branch below, so the variable is gated to the same platform — otherwise
+                // macOS/Linux builds would see "unused variable" warnings that clippy's
+                // `-D warnings` would turn into hard errors.
                 let last_fullscreen = std::sync::Arc::new(std::sync::Mutex::new(false));
                 let win_for_fs = window.clone();
-                #[allow(unused_variables)]
-                let menu_for_fs = menu_for_fullscreen.clone();
+                #[cfg(target_os = "windows")]
+                let menu_for_fs = app_menu.clone();
 
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { .. } = event {

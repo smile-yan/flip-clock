@@ -170,6 +170,31 @@ jobs:
           echo "--- after rename ---"
           find . -maxdepth 2 -type f -o -maxdepth 2 -type d -name '*.app'
 
+      # Render update.json from the template at the repo root: replace the
+      # `{{VERSION}}` and `{{DATE}}` placeholders with the actual tag and
+      # the build's UTC date so the updater plugin can parse a real
+      # manifest. Per-platform platforms map 1:1 to the rename step above,
+      # so the URLs in the manifest match the artifacts on disk.
+      # Only runs on tag pushes (not on workflow_dispatch dry-runs) to
+      # avoid baking placeholder values into an uploaded release artifact.
+      - name: Render update.json
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ github.ref_name }}"          # e.g. v1.0.9
+          VER="${TAG#v}"                        # strip leading 'v'
+          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          cd "$GITHUB_WORKSPACE"
+          sed -e "s/{{VERSION}}/${VER}/g" \
+              -e "s/{{DATE}}/${DATE}/g" \
+              update.json > rendered-update.json
+          echo "--- rendered update.json ---"
+          cat rendered-update.json
+          # Stash it next to the bundle so the upload step picks it up.
+          mkdir -p src-tauri/target/${{ matrix.arch }}/release/bundle/
+          cp rendered-update.json src-tauri/target/${{ matrix.arch }}/release/bundle/update.json
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
@@ -198,34 +223,65 @@ jobs:
 
       - name: Create universal DMG
         run: |
+          set -euo pipefail
           cd bundle
-          # Find the two per-arch DMG files (renamed by the build job to
-          # flip-clock-v{tag}-macos-arm64.dmg / -macos-x86_64.dmg)
-          ARM64=$(find . -name "*macos-arm64.dmg" 2>/dev/null | head -1)
-          AMD64=$(find . -name "*macos-x86_64.dmg" 2>/dev/null | head -1)
-          echo "Listing all DMG files:"
-          find . -name "*.dmg" 2>/dev/null
-          echo "Arm64: $ARM64"
-          echo "Amd64: $AMD64"
 
-          if [ -z "$ARM64" ] || [ -z "$AMD64" ]; then
+          # Find the two per-arch DMG files (renamed by the build job to
+          # flip-clock-v{tag}-macos-arm64.dmg / -macos-x86_64.dmg).
+          ARM64_DMG=$(find . -name "*macos-arm64.dmg" 2>/dev/null | head -1)
+          AMD64_DMG=$(find . -name "*macos-x86_64.dmg" 2>/dev/null | head -1)
+          echo "Arm64 DMG: $ARM64_DMG"
+          echo "Amd64 DMG: $AMD64_DMG"
+
+          if [ -z "$ARM64_DMG" ] || [ -z "$AMD64_DMG" ]; then
             echo "Error: Missing DMG files"
             exit 1
           fi
 
-          # Mount and copy apps
+          # Mount both DMGs read-only and copy the arm64 .app as the
+          # scaffold (it owns the Info.plist + Resources we keep).
           mkdir -p /tmp/arm64-app /tmp/amd64-app /tmp/universal
-          hdiutil attach "$ARM64" -readonly -nobrowse -mountpoint /tmp/arm64-app
+          hdiutil attach "$ARM64_DMG" -readonly -nobrowse -mountpoint /tmp/arm64-app
           cp -R /tmp/arm64-app/*.app /tmp/universal/
           hdiutil detach /tmp/arm64-app
 
-          hdiutil attach "$AMD64" -readonly -nobrowse -mountpoint /tmp/amd64-app
-          APP=$(ls /tmp/amd64-app/*.app 2>/dev/null | head -1)
-          if [ -n "$APP" ]; then
-            cp /tmp/amd64-app/*.app/Contents/MacOS/* /tmp/universal/*.app/Contents/MacOS/ 2>/dev/null || true
-            chmod +x /tmp/universal/*.app/Contents/MacOS/*
-          fi
+          hdiutil attach "$AMD64_DMG" -readonly -nobrowse -mountpoint /tmp/amd64-app
+          AMD64_APP=$(ls -d /tmp/amd64-app/*.app 2>/dev/null | head -1)
           hdiutil detach /tmp/amd64-app
+
+          UNI_APP="/tmp/universal/$(basename "$AMD64_APP")"
+          ARM64_BIN="$UNI_APP/Contents/MacOS/flip-clock"
+          AMD64_BIN="$AMD64_APP/Contents/MacOS/flip-clock"
+
+          if [ ! -f "$AMD64_BIN" ]; then
+            echo "Error: amd64 binary not found at $AMD64_BIN"
+            exit 1
+          fi
+
+          # Merge the two architectures into a single fat Mach-O. The old
+          # flow simply `cp`d the amd64 binary on top of the arm64 one,
+          # which silently produced an amd64-only binary dressed up as
+          # "universal". `lipo -create` is what produces a real fat
+          # binary that runs natively on both Apple Silicon and Intel.
+          mv "$ARM64_BIN" "$ARM64_BIN.arm64"
+          lipo -create \
+              "$ARM64_BIN.arm64" \
+              "$AMD64_BIN" \
+              -output "$ARM64_BIN"
+          rm "$ARM64_BIN.arm64"
+          chmod +x "$ARM64_BIN"
+
+          # Verify the result is actually fat (architectures listed in
+          # the Mach-O header). If lipo silently dropped an arch (rare,
+          # but it can happen with version mismatches) the DMG would
+          # be broken — fail loud here instead of uploading a half-built
+          # universal bundle.
+          ARCHES=$(lipo -info "$ARM64_BIN" | awk -F': ' '{print $2}')
+          echo "Universal binary architectures: $ARCHES"
+          case "$ARCHES" in
+            *arm64*x86_64*|*x86_64*arm64*) ;;
+            *) echo "Error: expected fat binary with both arm64 and x86_64, got: $ARCHES"; exit 1 ;;
+          esac
 
           ln -sf /Applications /tmp/universal/
 
@@ -265,6 +321,16 @@ jobs:
           echo "=== Assets ==="
           find release-assets -type f -exec ls -lh {} \;
 
+      - name: Pick one rendered update.json
+        # Each per-platform build job rendered its own copy of update.json
+        # and stashed it under its own bundle/ directory. They're all
+        # byte-identical (same tag, same date), so pick the first one and
+        # publish it once as `update.json` at the release root.
+        run: |
+          set -euo pipefail
+          find release-assets -name update.json -type f | head -1 | xargs -I {} cp {} update.json
+          ls -lh update.json
+
       - name: Create release
         uses: softprops/action-gh-release@v3
         with:
@@ -276,3 +342,4 @@ jobs:
             release-assets/rpm/*.rpm
             release-assets/msi/*.msi
             release-assets/*.dmg
+            update.json
