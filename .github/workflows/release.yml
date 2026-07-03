@@ -285,11 +285,18 @@ jobs:
           # but it can happen with version mismatches) the DMG would
           # be broken — fail loud here instead of uploading a half-built
           # universal bundle.
-          ARCHES=$(lipo -info "$ARM64_BIN" | awk -F': ' '{print $2}')
-          echo "Universal binary architectures: $ARCHES"
+          #
+          # `lipo -info` on macOS prints (e.g. for a fat binary):
+          #   "Architectures in the fat file: <path> are: <arches>"
+          # Splitting on ': ' gives 4 fields; the architectures are
+          # always the LAST field, so use $NF (not $2, which is the path
+          # — a previous version of this script shipped with $2 and
+          # silently passed the verification against the path string).
+          ARCHES=$(lipo -info "$ARM64_BIN" | awk -F': ' '{print $NF}' | tr -d ' ')
+          echo "Universal binary architectures: '$ARCHES'"
           case "$ARCHES" in
             *arm64*x86_64*|*x86_64*arm64*) ;;
-            *) echo "Error: expected fat binary with both arm64 and x86_64, got: $ARCHES"; exit 1 ;;
+            *) echo "Error: expected fat binary with both arm64 and x86_64, got: '$ARCHES'"; exit 1 ;;
           esac
 
           ln -sf /Applications /tmp/universal/
