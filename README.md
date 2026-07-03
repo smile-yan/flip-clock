@@ -89,7 +89,7 @@ The `showInDock` toggle controls whether the app shows a dock/taskbar icon. See 
 
 | Shortcut | Action |
 |----------|--------|
-| `F11` | Toggle fullscreen |
+| `Ctrl + Alt + F` (Windows / Linux) / `Ctrl + Cmd + F` (macOS) | Toggle fullscreen |
 | `Ctrl/Cmd + ,` | Open settings |
 | `Escape` | Close settings |
 
