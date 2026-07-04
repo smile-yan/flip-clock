@@ -303,10 +303,13 @@ jobs:
 
           # Create DMG (APFS, no HFS+/scrub — those legacy flags trip the
           # macOS 26 runner with `hdiutil: create failed - Resource busy`.)
+          # Switch from UDZO (zlib) to UDBZ (bzip2) for ~10-20% smaller DMG
+          # on the fat-binary .app. Build is one-shot per release so the
+          # extra compression time is acceptable.
           hdiutil create \
             -volname "Flip Clock" \
             -srcfolder /tmp/universal \
-            -ov -format UDZO \
+            -ov -format UDBZ \
             ../flip-clock-${{ github.ref_name }}-macos-universal.dmg
 
       - name: Upload
