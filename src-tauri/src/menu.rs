@@ -30,30 +30,36 @@ pub fn create_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>>
         .build()?;
 
     // Window Menu (窗口)
-    // Fullscreen shortcut, per platform:
-    //   - macOS:           Ctrl + Cmd + F
-    //   - Windows / Linux: Ctrl + Alt + F
-    // These mirror the combos the frontend webview listens for. Native menu
-    // accelerators and webview keydown events do not conflict because the
-    // native layer consumes the accelerator first; the webview's listener is
-    // a fallback for environments without the menu (e.g. dev preview).
-    let fullscreen_accelerator = if cfg!(target_os = "macos") {
-        "Ctrl+Cmd+F"
-    } else {
-        "Ctrl+Alt+F"
-    };
+    // macOS gets a native menu accelerator for Cmd+Ctrl+F (system fullscreen
+    // convention). On Windows and Linux we intentionally omit any accelerator
+    // here — the frontend webview owns Ctrl+Alt+F. If we register it as a
+    // native accelerator, the menu layer consumes the key first; then when
+    // the window enters fullscreen on Windows the entire menu is removed
+    // (see main.rs `remove_menu` in the Resized handler), at which point the
+    // native accelerator dies with the menu and Ctrl+Alt+F stops working
+    // until the menu is restored. Routing through the webview keydown
+    // listener keeps the shortcut alive across fullscreen transitions.
+    #[cfg(target_os = "macos")]
+    let fullscreen_accelerator: Option<&'static str> = Some("Cmd+Ctrl+F");
+    #[cfg(not(target_os = "macos"))]
+    let fullscreen_accelerator: Option<&'static str> = None;
 
-    let window_menu = SubmenuBuilder::new(app, "窗口")
+    let mut window_builder = SubmenuBuilder::new(app, "窗口")
         .item(&PredefinedMenuItem::minimize(app, None)?)
         .item(&PredefinedMenuItem::maximize(app, None)?)
-        .separator()
-        // 全屏
-        .item(
+        .separator();
+    window_builder = if let Some(accel) = fullscreen_accelerator {
+        window_builder.item(
             &MenuItemBuilder::with_id("fullscreen", "全屏")
-                .accelerator(fullscreen_accelerator)
+                .accelerator(accel)
                 .build(app)?,
         )
-        .build()?;
+    } else {
+        window_builder.item(
+            &MenuItemBuilder::with_id("fullscreen", "全屏").build(app)?,
+        )
+    };
+    let window_menu = window_builder.build()?;
 
     builder.item(&app_menu).item(&window_menu).build()
 }

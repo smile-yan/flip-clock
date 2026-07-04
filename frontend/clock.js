@@ -469,48 +469,9 @@ function openSettings() {
     modal.classList.add('visible');
 }
 
-// ============================================
-// About Modal
-// ============================================
-
-const aboutOverlay = document.getElementById('aboutOverlay');
-const aboutModal = document.getElementById('aboutModal');
-const aboutVersionEl = document.getElementById('aboutVersion');
-const aboutGithubLink = document.getElementById('aboutGithubLink');
-
-function openAbout() {
-    // Pull the live version string from Tauri so the About dialog tracks
-    // every release without a code-side bump. Falls back to whatever the
-    // HTML hard-coded placeholder says (so the dialog still has *some*
-    // version visible) when running outside Tauri (e.g. browser preview).
-    if (window.__TAURI__?.app?.getVersion) {
-        window.__TAURI__.app.getVersion()
-            .then((v) => {
-                if (aboutVersionEl) aboutVersionEl.textContent = `版本 ${v}`;
-            })
-            .catch(() => { /* keep placeholder */ });
-    } else if (window.__TAURI__?.core?.invoke) {
-        // Newer Tauri 2 global API: app.getVersion lives behind core.invoke.
-        window.__TAURI__.core.invoke('get_app_version')
-            .then((v) => {
-                if (aboutVersionEl) aboutVersionEl.textContent = `版本 ${v}`;
-            })
-            .catch(() => { /* keep placeholder */ });
-    }
-
-    if (aboutOverlay) aboutOverlay.classList.add('visible');
-    if (aboutModal) aboutModal.classList.add('visible');
-}
-
-function closeAbout() {
-    if (aboutOverlay) aboutOverlay.classList.remove('visible');
-    if (aboutModal) aboutModal.classList.remove('visible');
-}
-
-// Menu event handler (kept under the original name for backwards-compat
-// with the Rust side, which evals `showAboutDialog` when the menu fires).
 function showAboutDialog() {
-    openAbout();
+    const aboutMessage = `翻转时钟 v1.0.0\n\n一个简洁优雅的翻页时钟应用\n\nGitHub: https://github.com/smile-yan/easy-flip-clock`;
+    alert(aboutMessage);
 }
 
 function closeSettings() {
@@ -623,37 +584,7 @@ function debounceResize() {
 // ============================================
 
 function bindSettingsEvents() {
-    // Disable right-click context menu (legacy behavior preserved).
-    document.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-    });
-
-    // About dialog — close button + overlay click + GitHub link.
-    const aboutCloseBtn = document.getElementById('aboutCloseBtn');
-    if (aboutCloseBtn) {
-        aboutCloseBtn.addEventListener('click', closeAbout);
-    }
-    if (aboutOverlay) {
-        aboutOverlay.addEventListener('click', closeAbout);
-    }
-    if (aboutGithubLink) {
-        aboutGithubLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            // Tauri shell plugin opens the user's default browser; the
-            // link target is the canonical project repo (not the
-            // historical easy-flip-clock fork the old inline script used).
-            const url = 'https://github.com/smile-yan/flip-clock';
-            if (window.__TAURI__?.shell?.open) {
-                window.__TAURI__.shell.open(url).catch((err) => {
-                    console.error('[frontend] shell.open failed:', err);
-                });
-            } else {
-                window.open(url, '_blank', 'noopener,noreferrer');
-            }
-        });
-    }
-
-    // Settings — close on overlay click
+    // Close on overlay click
     overlay.addEventListener('click', closeSettings);
 
     // Close on red dot click
@@ -662,15 +593,10 @@ function bindSettingsEvents() {
         closeBtn.addEventListener('click', closeSettings);
     }
 
-    // Escape to close — match either modal (settings OR about) and also
-    // exit fullscreen when applicable (handled separately below).
+    // Escape to close
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (modal && modal.classList.contains('visible')) {
-                closeSettings();
-            } else if (aboutModal && aboutModal.classList.contains('visible')) {
-                closeAbout();
-            }
+        if (e.key === 'Escape' && modal.classList.contains('visible')) {
+            closeSettings();
         }
     });
 
@@ -747,9 +673,8 @@ function bindGlobalEvents() {
     });
 
     // Resolve the host OS once and cache the resulting string on a closure
-    // variable. Used only to gate the platform-specific fullscreen shortcut
-    // (Ctrl+Alt+F on Win/Linux, Ctrl+Cmd+F on macOS) — Escape and Ctrl/Cmd+,
-    // stay global.
+    // variable. Used only to gate Ctrl+Alt+F — F11, Escape, and Ctrl/Cmd+,
+    // stay global so we don't regress macOS muscle memory.
     let resolvePlatform;
     const platformPromise = new Promise((resolve) => {
         resolvePlatform = resolve;
@@ -765,40 +690,51 @@ function bindGlobalEvents() {
         resolvePlatform('unknown');
     }
     // If Tauri didn't tell us, sniff the user agent so a non-Tauri browser
-    // preview (e.g. opening clock.html locally) still classifies Mac correctly.
+    // preview (e.g. opening clock.html locally) still classifies correctly.
+    // Detection order: Mac → Windows → Linux. If we still can't tell, fall
+    // through to 'windows' so Ctrl+Alt+F still works — that key combo has no
+    // meaning on macOS (macOS uses Cmd+Ctrl+F), so defaulting to a Win/Linux
+    // path is the safe direction. Ctrl+Alt+F gets a real OS check at press
+    // time via the menu accelerator being absent (see menu.rs).
     platformPromise.then((p) => {
         if (p === 'unknown' && typeof navigator !== 'undefined') {
             const ua = navigator.platform || navigator.userAgent || '';
-            if (/Mac|iPhone|iPad/.test(ua)) resolvePlatform('darwin');
+            if (/Mac|iPhone|iPad/.test(ua)) {
+                resolvePlatform('darwin');
+            } else if (/Win/.test(ua)) {
+                resolvePlatform('windows');
+            } else if (/Linux|X11/.test(ua)) {
+                resolvePlatform('linux');
+            } else {
+                resolvePlatform('windows');
+            }
         }
     });
 
     // Keyboard shortcuts
     document.addEventListener('keydown', async (e) => {
-        // Toggle fullscreen, platform-specific.
-        //   - Windows / Linux: Ctrl + Alt + F
-        //   - macOS:           Ctrl + Cmd + F
-        // We only check the modifier combo, then match both 'f' and 'F' so a
-        // stray Shift modifier (or a Shift-required layout) doesn't swallow
-        // the event.
-        const platform = await platformPromise;
-        const isFullscreenKey = e.key === 'f' || e.key === 'F';
-
-        if (platform === 'macos' || platform === 'darwin') {
-            // Ctrl + Cmd + F (e.ctrlKey + e.metaKey, no Alt)
-            if (e.ctrlKey && e.metaKey && !e.altKey && isFullscreenKey) {
-                e.preventDefault();
-                try {
-                    if (window.__TAURI__) {
-                        await window.__TAURI__.core.invoke('toggle_fullscreen');
-                    }
-                } catch (err) {
-                    console.error('[frontend] Toggle fullscreen (Ctrl+Cmd+F) failed:', err);
+        // F11 - Toggle fullscreen (kept for macOS; also works as a fallback on Win/Linux)
+        if (e.key === 'F11') {
+            e.preventDefault();
+            try {
+                if (window.__TAURI__) {
+                    await window.__TAURI__.core.invoke('toggle_fullscreen');
                 }
+            } catch (err) {
+                console.error('[frontend] Toggle fullscreen failed:', err);
             }
-        } else {
-            // Windows / Linux: Ctrl + Alt + F
-            if (e.ctrlKey && e.altKey && !e.metaKey && isFullscreenKey) {
+        }
+
+        // Ctrl + Alt + F - Toggle fullscreen (Windows / Linux only).
+        // On macOS this branch is intentionally skipped so the existing F11
+        // path stays the sole fullscreen toggle — we don't override the
+        // platform's native fullscreen key.
+        // We only check `e.ctrlKey && e.altKey && !e.metaKey`; matching both
+        // 'f' and 'F' guards against a stray Shift modifier swallowing the
+        // event on some keyboard layouts.
+        const platform = await platformPromise;
+        if (platform === 'windows' || platform === 'linux') {
+            if (e.ctrlKey && e.altKey && !e.metaKey && (e.key === 'f' || e.key === 'F')) {
                 e.preventDefault();
                 try {
                     if (window.__TAURI__) {
@@ -810,26 +746,11 @@ function bindGlobalEvents() {
             }
         }
 
-        // Escape - Exit fullscreen (so users aren't stuck once the native menu is hidden).
-        //
-        // macOS NSWindow's fullscreen animation can keep `isFullscreen()`
-        // reporting the pre-transition value for a few frames after the
-        // user releases the toggle shortcut. If our first poll says "not
-        // fullscreen" while the window is clearly transitioning, retry
-        // once after a short delay before giving up. This avoids the
-        // "Escape did nothing" feel users hit when racing the animation.
+        // Escape - Exit fullscreen (so users aren't stuck once the native menu is hidden)
         if (e.key === 'Escape') {
             try {
                 if (window.__TAURI__?.window?.getCurrentWindow) {
-                    const win = window.__TAURI__.window.getCurrentWindow();
-                    let isFs = false;
-                    try {
-                        isFs = await win.isFullscreen();
-                    } catch (_) { /* fall through to retry */ }
-                    if (!isFs) {
-                        await new Promise((r) => setTimeout(r, 80));
-                        try { isFs = await win.isFullscreen(); } catch (_) { /* ignore */ }
-                    }
+                    const isFs = await window.__TAURI__.window.getCurrentWindow().isFullscreen();
                     if (isFs) {
                         e.preventDefault();
                         await window.__TAURI__.core.invoke('toggle_fullscreen');
@@ -840,11 +761,8 @@ function bindGlobalEvents() {
             }
         }
 
-        // Ctrl/Cmd + , - Open settings. We match both `e.key === ','` (the
-        // standard key on most layouts) AND `e.code === 'Comma'` (the
-        // physical key, immune to IME / non-US layouts where pressing
-        // the comma key surfaces a different character).
-        if ((e.ctrlKey || e.metaKey) && (e.key === ',' || e.code === 'Comma')) {
+        // Ctrl/Cmd + , - Open settings
+        if ((e.ctrlKey || e.metaKey) && e.key === ',') {
             e.preventDefault();
             openSettings();
         }

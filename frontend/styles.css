@@ -1,0 +1,742 @@
+/* === Theme Variables (default: dark) === */
+:root,
+:root[data-theme="dark"] {
+    --bg-color: #010101;
+    --text-color: #EEE;
+    --motto-color: #EEE;
+    --weekday-color: #EEE;
+    --lunar-color: #BBB;
+    --card-bg: #333;
+    --card-shadow: rgba(0, 0, 0, 0.7);
+    --card-divider: rgba(0, 0, 0, 0.4);
+    --flip-card-bg: #222;
+    --flip-card-text: #EEE;
+    /* Modal styles (fixed dark, macOS style) */
+    --modal-bg: #2c2c2c;
+    --modal-text: #f5f5f5;
+    --modal-muted: #b5b5b5;
+    --modal-label: #d6d6d6;
+    --modal-border: rgba(255, 255, 255, 0.08);
+    --modal-section-line: rgba(255, 255, 255, 0.05);
+    --modal-accent: #ffffff;
+    --modal-accent-soft: rgba(255, 255, 255, 0.18);
+    --option-bg: #3a3a3a;
+    --option-bg-hover: #454545;
+    --option-border: rgba(255, 255, 255, 0.1);
+    --btn-text: #1a1a1a;
+    --preview-bg: #e8eef4;
+    --preview-card-bg: #2c2c2c;
+    --preview-card-text: #f5f5f5;
+    --preview-am-pm: #2c2c2c;
+    --input-bg: transparent;
+    --input-border: rgba(255, 255, 255, 0.18);
+    --input-text: #f5f5f5;
+    --input-placeholder: #6f6f6f;
+    --select-bg: #1f1f1f;
+    --select-arrow: #b5b5b5;
+    --check-bg: #1f1f1f;
+    --check-border: rgba(255, 255, 255, 0.35);
+    --check-checked-bg: #e8eef4;
+    --check-disabled-bg: #1a1a1a;
+    --pro-tag-bg: #555;
+    --pro-tag-text: #ddd;
+}
+
+:root[data-theme="light"] {
+    --bg-color: #f5f5f5;
+    --text-color: #222;
+    --motto-color: #444;
+    --weekday-color: #444;
+    --lunar-color: #777;
+    --card-bg: #ffffff;
+    --card-shadow: rgba(0, 0, 0, 0.15);
+    --card-divider: rgba(0, 0, 0, 0.1);
+    --flip-card-bg: #f8f8f8;
+    --flip-card-text: #222;
+}
+
+:root[data-theme="sepia"] {
+    --bg-color: #f4ecd8;
+    --text-color: #5b4636;
+    --motto-color: #6b4f3a;
+    --weekday-color: #6b4f3a;
+    --lunar-color: #8a6f54;
+    --card-bg: #d9c7a3;
+    --card-shadow: rgba(91, 70, 54, 0.4);
+    --card-divider: rgba(91, 70, 54, 0.35);
+    --flip-card-bg: #c9b793;
+    --flip-card-text: #5b4636;
+}
+
+:root[data-theme="blue"] {
+    --bg-color: #0b1d3a;
+    --text-color: #cfe2ff;
+    --motto-color: #aac8ff;
+    --weekday-color: #aac8ff;
+    --lunar-color: #8aa4d8;
+    --card-bg: #1b3a6b;
+    --card-shadow: rgba(0, 0, 0, 0.5);
+    --card-divider: rgba(0, 0, 0, 0.5);
+    --flip-card-bg: #0b2860;
+    --flip-card-text: #cfe2ff;
+}
+
+:root[data-theme="forest"] {
+    --bg-color: #0d1f17;
+    --text-color: #c8e6c9;
+    --motto-color: #b3d9b3;
+    --weekday-color: #b3d9b3;
+    --lunar-color: #88a988;
+    --card-bg: #1a3a2a;
+    --card-shadow: rgba(0, 0, 0, 0.55);
+    --card-divider: rgba(0, 0, 0, 0.45);
+    --flip-card-bg: #0f2a1a;
+    --flip-card-text: #c8e6c9;
+}
+
+:root[data-theme="sunset"] {
+    --bg-color: #2a0f0a;
+    --text-color: #ffe0b2;
+    --motto-color: #ffccbc;
+    --weekday-color: #ffccbc;
+    --lunar-color: #d7a48c;
+    --card-bg: #5c2410;
+    --card-shadow: rgba(0, 0, 0, 0.6);
+    --card-divider: rgba(0, 0, 0, 0.5);
+    --flip-card-bg: #4c1400;
+    --flip-card-text: #ffe0b2;
+}
+
+:root[data-theme="midnight"] {
+    --bg-color: #11071f;
+    --text-color: #d8c2f0;
+    --motto-color: #c2a8e0;
+    --weekday-color: #c2a8e0;
+    --lunar-color: #9781b3;
+    --card-bg: #2a1a44;
+    --card-shadow: rgba(0, 0, 0, 0.6);
+    --card-divider: rgba(0, 0, 0, 0.5);
+    --flip-card-bg: #1a0a34;
+    --flip-card-text: #d8c2f0;
+}
+
+:root[data-theme="ocean"] {
+    --bg-color: #04262b;
+    --text-color: #b3ecf0;
+    --motto-color: #9adde2;
+    --weekday-color: #9adde2;
+    --lunar-color: #6abac1;
+    --card-bg: #0a4450;
+    --card-shadow: rgba(0, 0, 0, 0.55);
+    --card-divider: rgba(0, 0, 0, 0.5);
+    --flip-card-bg: #023440;
+    --flip-card-text: #b3ecf0;
+}
+
+:root[data-theme="rose"] {
+    --bg-color: #2a0e1a;
+    --text-color: #ffd0d8;
+    --motto-color: #f5b8c4;
+    --weekday-color: #f5b8c4;
+    --lunar-color: #c98a96;
+    --card-bg: #4d1a2e;
+    --card-shadow: rgba(0, 0, 0, 0.55);
+    --card-divider: rgba(0, 0, 0, 0.5);
+    --flip-card-bg: #3d0a1e;
+    --flip-card-text: #ffd0d8;
+}
+
+:root[data-theme="slate"] {
+    --bg-color: #1a1d21;
+    --text-color: #d8dadc;
+    --motto-color: #b8bcc0;
+    --weekday-color: #b8bcc0;
+    --lunar-color: #8e9296;
+    --card-bg: #2c3034;
+    --card-shadow: rgba(0, 0, 0, 0.55);
+    --card-divider: rgba(0, 0, 0, 0.45);
+    --flip-card-bg: #1c2024;
+    --flip-card-text: #d8dadc;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    overflow: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.container {
+    text-align: center;
+    transform: scale(var(--zoom-level, 1));
+    transform-origin: center center;
+    transition: transform 0.2s ease-out;
+}
+
+/* === Date Bar === */
+.date-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: var(--weekday-color);
+}
+
+.weekday {
+    color: var(--weekday-color);
+    font-size: 13px;
+}
+
+.lunar {
+    color: var(--lunar-color);
+    font-size: 13px;
+    min-height: 16px;
+}
+
+/* === Motto === */
+.motto {
+    margin-top: 12px;
+    text-align: center;
+    color: var(--motto-color);
+    font-size: 13px;
+    min-height: 18px;
+}
+
+/* === Pure CSS Flip Clock === */
+.clock {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.clock > .clock-group {
+    display: flex;
+    align-items: center;
+}
+
+.digit-pair {
+    display: flex;
+    gap: 4px;
+}
+
+.flip-digit {
+    position: relative;
+    width: 66px;
+    height: 90px;
+    perspective: 200px;
+    transform-style: preserve-3d;
+}
+
+.flip-card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+}
+
+.flip-card-inner {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    overflow: hidden;
+    background: transparent;
+    backface-visibility: hidden;
+}
+
+.flip-card-inner.top {
+    top: 0;
+    transform-origin: 50% 100%;
+    border-radius: 6px 6px 0 0;
+}
+
+.flip-card-inner.bottom {
+    bottom: 0;
+    transform-origin: 50% 0%;
+    border-radius: 0 0 6px 6px;
+}
+
+/* Divider line */
+.flip-card-inner.top::after {
+    content: "";
+    position: absolute;
+    top: 44px;
+    left: 0;
+    z-index: 5;
+    width: 100%;
+    height: 3px;
+    background-color: var(--card-divider);
+}
+
+.flip-card .value {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 200%;
+    color: var(--flip-card-text);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    background-color: var(--flip-card-bg);
+    border-radius: 6px;
+    font-size: 88px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+.flip-card-inner.top .value {
+    top: 0;
+}
+
+.flip-card-inner.bottom .value {
+    bottom: 0;
+}
+
+/* === Flip Animation === */
+.flip-card-inner.is-flipping {
+    animation: flipDown 0.5s ease-in-out forwards;
+    transform-origin: 50% 100%;
+}
+
+@keyframes flipDown {
+    0% {
+        transform: rotateX(0deg);
+    }
+    100% {
+        transform: rotateX(-90deg);
+    }
+}
+
+/* Value text inside flip card */
+.flip-card .value {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 200%;
+    color: var(--flip-card-text);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    background-color: var(--flip-card-bg);
+    border-radius: 6px;
+    font-size: 88px;
+    font-weight: bold;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1;
+}
+
+.flip-card-inner.top .value {
+    top: 0;
+}
+
+.flip-card-inner.bottom .value {
+    bottom: 0;
+}
+
+/* === Clock Separator === */
+.clock-separator {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 90px;
+    width: 20px;
+    gap: 18px;
+}
+
+.separator-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--flip-card-bg);
+    box-shadow: 0 0 5px var(--card-shadow);
+}
+
+/* === Meridiem Indicator (AM/PM) === */
+.meridiem {
+    position: absolute;
+    top: -4px;
+    left: 0;
+    width: 36px;
+    height: 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: flex-start;
+    padding-top: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.meridiem.visible {
+    opacity: 1;
+}
+
+/* === Settings Modal Styles === */
+
+/* Settings Overlay */
+.settings-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.45);
+    z-index: 999;
+}
+
+.settings-overlay.visible {
+    display: block;
+}
+
+/* Settings Modal */
+.settings-modal {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--modal-bg);
+    color: var(--modal-text);
+    border: 1px solid var(--modal-border);
+    border-radius: 12px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    padding: 0 28px 24px 28px;
+    z-index: 1000;
+    width: 540px;
+    max-width: 92vw;
+    font-size: 14px;
+}
+
+.settings-modal.visible {
+    display: block;
+}
+
+/* Window Chrome */
+.settings-modal .window-chrome {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 14px 0 10px 0;
+    border-bottom: 1px solid var(--modal-section-line);
+    margin-bottom: 16px;
+}
+
+.settings-modal .window-chrome .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    display: inline-block;
+}
+
+.settings-modal .window-chrome .dot.red {
+    background: #ff5f57;
+}
+
+.settings-modal .window-chrome .dot.yellow {
+    background: #febc2e;
+}
+
+.settings-modal .window-chrome .dot.green {
+    background: #28c840;
+}
+
+.settings-modal .window-chrome .dot.close-btn {
+    cursor: pointer;
+    position: relative;
+}
+
+.settings-modal .window-chrome .dot.close-btn::before,
+.settings-modal .window-chrome .dot.close-btn::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 1.5px;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: 1px;
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+    transition: opacity 0.12s ease;
+}
+
+.settings-modal .window-chrome .dot.close-btn::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.settings-modal .window-chrome .dot.close-btn:hover::before,
+.settings-modal .window-chrome .dot.close-btn:hover::after,
+.settings-modal .window-chrome .dot.close-btn:focus-visible::before,
+.settings-modal .window-chrome .dot.close-btn:focus-visible::after {
+    opacity: 1;
+}
+
+.settings-modal .window-chrome .window-title {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--modal-muted);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+/* Settings Sections */
+.settings-section {
+    margin-top: 14px;
+}
+
+.settings-section .section-label {
+    display: block;
+    color: var(--modal-label);
+    font-size: 13px;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+/* Style Options */
+.style-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: stretch;
+    justify-items: center;
+}
+
+.style-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.style-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.style-option .preview {
+    flex: 1;
+    width: 100%;
+    background: var(--preview-bg);
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 2px solid transparent;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.style-option .preview-row {
+    display: flex;
+    gap: 4px;
+}
+
+.style-option .preview-card {
+    background: var(--preview-card-bg);
+    color: var(--preview-card-text);
+    padding: 6px 10px;
+    border-radius: 3px;
+    font-family: 'Courier New', 'Menlo', monospace;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1;
+    min-width: 30px;
+    text-align: center;
+    box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.25);
+    position: relative;
+}
+
+.style-option .preview-card::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.35);
+    transform: translateY(-0.5px);
+}
+
+.style-option .preview-am-pm {
+    color: var(--preview-am-pm);
+    font-size: 9px;
+    font-weight: 600;
+    align-self: flex-start;
+    margin-left: 2px;
+    letter-spacing: 0.05em;
+}
+
+.style-option .preview-full {
+    min-width: 170px;
+}
+
+.style-option .preview-minimal {
+    min-width: 130px;
+}
+
+.style-option input[type="radio"]:checked + .preview {
+    border-color: var(--modal-accent);
+    box-shadow: 0 0 0 2px var(--modal-accent-soft);
+}
+
+.style-option::after {
+    content: '';
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--modal-muted);
+    background: transparent;
+    margin-top: 10px;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.style-option:has(input[type="radio"]:checked)::after {
+    background: var(--modal-accent);
+    border-color: var(--modal-accent);
+}
+
+/* Select */
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.select-wrapper::after {
+    content: '⌄';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--select-arrow);
+    pointer-events: none;
+    font-size: 12px;
+}
+
+.settings-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-color: var(--select-bg);
+    color: var(--modal-text);
+    border: 1px solid var(--input-border);
+    border-radius: 6px;
+    padding: 6px 30px 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+.settings-select:focus {
+    outline: none;
+    border-color: var(--modal-accent);
+}
+
+/* Checkboxes */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 24px;
+}
+
+.check-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    color: var(--modal-text);
+    font-size: 13px;
+}
+
+.check-line input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.check-box {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--check-border);
+    background-color: var(--check-bg);
+    border-radius: 3px;
+    display: inline-block;
+    position: relative;
+    flex-shrink: 0;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.check-line input[type="checkbox"]:checked + .check-box {
+    background-color: var(--check-checked-bg);
+    border-color: var(--check-checked-bg);
+}
+
+.check-line input[type="checkbox"]:checked + .check-box::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid #2c2c2c;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.check-line input[type="checkbox"]:disabled + .check-box {
+    background: var(--check-disabled-bg);
+    border-color: var(--modal-border);
+    cursor: not-allowed;
+}
+
+/* Motto Input */
+.motto-input-section {
+    margin-top: 10px;
+}
+
+.settings-text-input {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: none;
+    border-bottom: 1px solid var(--input-border);
+    padding: 8px 4px;
+    font-size: 13px;
+    border-radius: 0;
+}
+
+.settings-text-input::placeholder {
+    color: var(--input-placeholder);
+}
+
+.settings-text-input:focus {
+    outline: none;
+    border-bottom-color: var(--modal-accent);
+}

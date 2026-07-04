@@ -115,6 +115,7 @@ jobs:
           cargo tauri build --target ${{ matrix.arch }}
 
       - name: Rename artifacts to v-tag format
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           set -euo pipefail
@@ -169,31 +170,6 @@ jobs:
           echo "--- after rename ---"
           find . -maxdepth 2 -type f -o -maxdepth 2 -type d -name '*.app'
 
-      # Render update.json from the template at the repo root: replace the
-      # `{{VERSION}}` and `{{DATE}}` placeholders with the actual tag and
-      # the build's UTC date so the updater plugin can parse a real
-      # manifest. Per-platform platforms map 1:1 to the rename step above,
-      # so the URLs in the manifest match the artifacts on disk.
-      # Only runs on tag pushes (not on workflow_dispatch dry-runs) to
-      # avoid baking placeholder values into an uploaded release artifact.
-      - name: Render update.json
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          set -euo pipefail
-          TAG="${{ github.ref_name }}"          # e.g. v1.0.9
-          VER="${TAG#v}"                        # strip leading 'v'
-          DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          cd "$GITHUB_WORKSPACE"
-          sed -e "s/{{VERSION}}/${VER}/g" \
-              -e "s/{{DATE}}/${DATE}/g" \
-              update.json > rendered-update.json
-          echo "--- rendered update.json ---"
-          cat rendered-update.json
-          # Stash it next to the bundle so the upload step picks it up.
-          mkdir -p src-tauri/target/${{ matrix.arch }}/release/bundle/
-          cp rendered-update.json src-tauri/target/${{ matrix.arch }}/release/bundle/update.json
-
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
@@ -222,37 +198,35 @@ jobs:
 
       - name: Create universal DMG
         run: |
-          set -euo pipefail
           cd bundle
-
           # Find the two per-arch DMG files (renamed by the build job to
-          # flip-clock-v{tag}-macos-arm64.dmg / -macos-x86_64.dmg).
-          ARM64_DMG=$(find . -name "*macos-arm64.dmg" 2>/dev/null | head -1)
-          AMD64_DMG=$(find . -name "*macos-x86_64.dmg" 2>/dev/null | head -1)
-          echo "Arm64 DMG: $ARM64_DMG"
-          echo "Amd64 DMG: $AMD64_DMG"
+          # flip-clock-v{tag}-macos-arm64.dmg / -macos-x86_64.dmg)
+          ARM64=$(find . -name "*macos-arm64.dmg" 2>/dev/null | head -1)
+          AMD64=$(find . -name "*macos-x86_64.dmg" 2>/dev/null | head -1)
+          echo "Listing all DMG files:"
+          find . -name "*.dmg" 2>/dev/null
+          echo "Arm64: $ARM64"
+          echo "Amd64: $AMD64"
 
-          if [ -z "$ARM64_DMG" ] || [ -z "$AMD64_DMG" ]; then
+          if [ -z "$ARM64" ] || [ -z "$AMD64" ]; then
             echo "Error: Missing DMG files"
             exit 1
           fi
 
-          # Mount both DMGs read-only and copy the arm64 .app as the
-          # scaffold (it owns the Info.plist + Resources we keep).
+          # Mount and copy apps
           mkdir -p /tmp/arm64-app /tmp/amd64-app /tmp/universal
-          hdiutil attach "$ARM64_DMG" -readonly -nobrowse -mountpoint /tmp/arm64-app
+          hdiutil attach "$ARM64" -readonly -nobrowse -mountpoint /tmp/arm64-app
           cp -R /tmp/arm64-app/*.app /tmp/universal/
           hdiutil detach /tmp/arm64-app
 
-          hdiutil attach "$AMD64_DMG" -readonly -nobrowse -mountpoint /tmp/amd64-app
+          hdiutil attach "$AMD64" -readonly -nobrowse -mountpoint /tmp/amd64-app
           AMD64_APP=$(ls -d /tmp/amd64-app/*.app 2>/dev/null | head -1)
 
-          # Copy the amd64 binary to a stable path BEFORE we detach the
-          # DMG. Once the mount is gone, $AMD64_APP/Contents/MacOS/flip-clock
-          # becomes a stale path on a dead mount, and `lipo -create` would
-          # silently (or noisily — depending on the lipo version) fail with
-          # "file not found". `/tmp` survives the detach, so this is the
-          # right place to materialize the input file.
+          # Copy the amd64 binary to a stable path BEFORE we detach the DMG.
+          # Once the mount is gone, $AMD64_APP/Contents/MacOS/flip-clock is
+          # a stale path on a dead mount, and `lipo -create` would fail with
+          # "file not found". `/tmp` survives the detach, so materializing
+          # the input there is what lets the lipo step actually run.
           AMD64_BIN_COPY="/tmp/amd64-flip-clock-bin"
           cp "$AMD64_APP/Contents/MacOS/flip-clock" "$AMD64_BIN_COPY"
           hdiutil detach /tmp/amd64-app
@@ -266,11 +240,11 @@ jobs:
             exit 1
           fi
 
-          # Merge the two architectures into a single fat Mach-O. The old
-          # flow simply `cp`d the amd64 binary on top of the arm64 one,
-          # which silently produced an amd64-only binary dressed up as
-          # "universal". `lipo -create` is what produces a real fat
-          # binary that runs natively on both Apple Silicon and Intel.
+          # Merge the two architectures into a single fat Mach-O. The naive
+          # flow `cp`s the amd64 binary on top of the arm64 one, which
+          # silently produces an amd64-only binary dressed up as "universal".
+          # `lipo -create` is what produces a real fat binary that runs
+          # natively on both Apple Silicon and Intel.
           mv "$ARM64_BIN" "$ARM64_BIN.arm64"
           lipo -create \
               "$ARM64_BIN.arm64" \
@@ -279,18 +253,16 @@ jobs:
           rm "$ARM64_BIN.arm64"
           chmod +x "$ARM64_BIN"
 
-          # Verify the result is actually fat (architectures listed in
-          # the Mach-O header). If lipo silently dropped an arch (rare,
-          # but it can happen with version mismatches) the DMG would
+          # Verify the result is actually fat. If lipo silently dropped an
+          # arch (rare, but possible with version mismatches) the DMG would
           # be broken — fail loud here instead of uploading a half-built
           # universal bundle.
           #
-          # `lipo -info` on macOS prints (e.g. for a fat binary):
+          # `lipo -info` prints:
           #   "Architectures in the fat file: <path> are: <arches>"
-          # Splitting on ': ' gives 4 fields; the architectures are
-          # always the LAST field, so use $NF (not $2, which is the path
-          # — a previous version of this script shipped with $2 and
-          # silently passed the verification against the path string).
+          # Splitting on ': ' gives multiple fields; the architectures are
+          # always the LAST field, so use $NF (a previous version shipped
+          # with $2 and silently passed verification against the path string).
           ARCHES=$(lipo -info "$ARM64_BIN" | awk -F': ' '{print $NF}' | tr -d ' ')
           echo "Universal binary architectures: '$ARCHES'"
           case "$ARCHES" in
@@ -302,13 +274,10 @@ jobs:
 
           # Create DMG (APFS, no HFS+/scrub — those legacy flags trip the
           # macOS 26 runner with `hdiutil: create failed - Resource busy`.)
-          # Switch from UDZO (zlib) to UDBZ (bzip2) for ~10-20% smaller DMG
-          # on the fat-binary .app. Build is one-shot per release so the
-          # extra compression time is acceptable.
           hdiutil create \
             -volname "Flip Clock" \
             -srcfolder /tmp/universal \
-            -ov -format UDBZ \
+            -ov -format UDZO \
             ../flip-clock-${{ github.ref_name }}-macos-universal.dmg
 
       - name: Upload
@@ -339,16 +308,6 @@ jobs:
           echo "=== Assets ==="
           find release-assets -type f -exec ls -lh {} \;
 
-      - name: Pick one rendered update.json
-        # Each per-platform build job rendered its own copy of update.json
-        # and stashed it under its own bundle/ directory. They're all
-        # byte-identical (same tag, same date), so pick the first one and
-        # publish it once as `update.json` at the release root.
-        run: |
-          set -euo pipefail
-          find release-assets -name update.json -type f | head -1 | xargs -I {} cp {} update.json
-          ls -lh update.json
-
       - name: Create release
         uses: softprops/action-gh-release@v3
         with:
@@ -359,9 +318,4 @@ jobs:
             release-assets/deb/*.deb
             release-assets/rpm/*.rpm
             release-assets/msi/*.msi
-            # Top-level *.dmg is the universal DMG uploaded by package-macos.
-            # The **/dmg/*.dmg glob catches the per-arch DMGs that build
-            # jobs uploaded under release-assets/<artifact-name>/dmg/.
             release-assets/*.dmg
-            release-assets/**/dmg/*.dmg
-            update.json

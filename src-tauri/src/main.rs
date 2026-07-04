@@ -152,15 +152,6 @@ fn get_release_url() -> String {
     "https://github.com/smile-yan/flip-clock/releases/latest".to_string()
 }
 
-/// Return the running app's version string (from tauri.conf.json). The
-/// frontend's About dialog uses this so the displayed version tracks
-/// releases automatically — no hard-coded "v1.0.0" string to forget to
-/// bump on every release.
-#[tauri::command]
-fn get_app_version<R: Runtime>(app: tauri::AppHandle<R>) -> String {
-    app.package_info().version.to_string()
-}
-
 #[tauri::command]
 fn get_available_styles() -> Vec<String> {
     available_styles()
@@ -175,57 +166,6 @@ fn get_available_time_formats() -> Vec<String> {
         .into_iter()
         .map(|s| s.to_string())
         .collect()
-}
-
-/// Apply the "show in dock / taskbar" preference. Per-platform:
-/// - macOS: flips `NSApp.activationPolicy` via Tauri's `set_dock_visibility`
-///   (Regular ↔ Accessory), which also hides/reveals the window.
-/// - Windows: toggles `WS_EX_APPWINDOW` for the main window via
-///   `Window::set_skip_taskbar`.
-/// - Linux: no cross-desktop API in Tauri core; we persist the preference
-///   anyway and log a warning. (A status-notifier / tray icon would be the
-///   Linux-friendly way to recover the window when the launcher entry is
-///   suppressed — out of scope for this setting.)
-fn apply_dock_visibility<R: Runtime>(
-    app: &tauri::AppHandle<R>,
-    visible: bool,
-) -> Result<(), String> {
-    log::info!("apply_dock_visibility: visible={}", visible);
-
-    #[cfg(target_os = "macos")]
-    {
-        app.set_dock_visibility(visible)
-            .map_err(|e| format!("Failed to set macOS dock visibility: {}", e))?;
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        if let Some(window) = app.get_webview_window("main") {
-            window
-                .set_skip_taskbar(!visible)
-                .map_err(|e| format!("Failed to set Windows skip_taskbar: {}", e))?;
-        } else {
-            log::warn!("apply_dock_visibility: 'main' window not found");
-        }
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        log::warn!(
-            "Linux: no cross-desktop 'hide from dock/taskbar' API in Tauri core. \
-             The preference is saved and applied on macOS/Windows."
-        );
-        // Both params are unused on Linux — silence the `unused_variables` lint
-        // that CI's `-D warnings` turns into an error.
-        let _ = (app, visible);
-    }
-
-    Ok(())
-}
-
-#[tauri::command]
-fn set_dock_visibility<R: Runtime>(app: tauri::AppHandle<R>, visible: bool) -> Result<(), String> {
-    apply_dock_visibility(&app, visible)
 }
 
 /// Handle menu events from the native menu bar
@@ -298,9 +238,7 @@ fn main() {
             get_available_themes,
             get_available_styles,
             get_available_time_formats,
-            get_release_url,
-            get_app_version,
-            set_dock_visibility
+            get_release_url
         ])
         .setup(|app| {
             log::info!("App setup complete");
@@ -313,15 +251,6 @@ fn main() {
             app.on_menu_event(|app, event| {
                 handle_menu_event(app, event);
             });
-
-            // Apply the persisted "show in dock / taskbar" preference now, so
-            // users who previously disabled the icon don't see a flash of the
-            // dock/taskbar entry before the setting kicks in.
-            if let Ok(cfg) = load() {
-                if let Err(e) = apply_dock_visibility(app.handle(), cfg.show_in_dock) {
-                    log::error!("Failed to apply initial dock visibility: {}", e);
-                }
-            }
 
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {
@@ -354,15 +283,11 @@ fn main() {
                 // Track fullscreen transitions so we can hide/restore the native menu on Windows.
                 // On Windows the menu bar is part of the window chrome, so it stays visible
                 // unless we explicitly remove it while in fullscreen.
-                //
-                // `menu_for_fs` is only used inside the `#[cfg(target_os = "windows")]`
-                // branch below, so the variable is gated to the same platform — otherwise
-                // macOS/Linux builds would see "unused variable" warnings that clippy's
-                // `-D warnings` would turn into hard errors.
+                let menu_for_fullscreen = app_menu.clone();
                 let last_fullscreen = std::sync::Arc::new(std::sync::Mutex::new(false));
                 let win_for_fs = window.clone();
-                #[cfg(target_os = "windows")]
-                let menu_for_fs = app_menu.clone();
+                #[allow(unused_variables)]
+                let menu_for_fs = menu_for_fullscreen.clone();
 
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { .. } = event {
