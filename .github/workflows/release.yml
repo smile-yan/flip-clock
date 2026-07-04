@@ -357,5 +357,9 @@ jobs:
             release-assets/deb/*.deb
             release-assets/rpm/*.rpm
             release-assets/msi/*.msi
+            # Top-level *.dmg is the universal DMG uploaded by package-macos.
+            # The **/dmg/*.dmg glob catches the per-arch DMGs that build
+            # jobs uploaded under release-assets/<artifact-name>/dmg/.
             release-assets/*.dmg
+            release-assets/**/dmg/*.dmg
             update.json
