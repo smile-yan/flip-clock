@@ -8,7 +8,10 @@ use config::{available_styles, available_themes, available_time_formats, load, s
 use menu::create_app_menu;
 use std::collections::HashMap;
 use tauri::{menu::MenuEvent, Emitter, Manager, Runtime};
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+// Global shortcut plugin is Win/Linux only — keep its imports behind the same
+// cfg gate so macOS clippy doesn't flag them as unused.
+#[cfg(not(target_os = "macos"))]
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Shortcut, ShortcutState};
 
 #[tauri::command]
 fn get_config() -> Result<HashMap<String, serde_json::Value>, String> {
@@ -258,27 +261,37 @@ fn main() {
             // Using global shortcut plugin bypasses AltGr conflicts that affect JS keydown events.
             #[cfg(not(target_os = "macos"))]
             {
-                use tauri_plugin_global_shortcut::Code;
-                let shortcut = Shortcut::new(Some(tauri_plugin_global_shortcut::Modifiers::CONTROL | tauri_plugin_global_shortcut::Modifiers::ALT), Code::KeyF);
+                let shortcut = Shortcut::new(
+                    Some(
+                        tauri_plugin_global_shortcut::Modifiers::CONTROL
+                            | tauri_plugin_global_shortcut::Modifiers::ALT,
+                    ),
+                    Code::KeyF,
+                );
                 let app_handle = app.handle().clone();
-                if let Err(e) = app.global_shortcut().on_shortcut(shortcut, move |_app, _shortcut, event| {
-                    if event.state == ShortcutState::Pressed {
-                        log::info!("Global shortcut Ctrl+Alt+F triggered");
-                        if let Some(window) = app_handle.get_webview_window("main") {
-                            match window.is_fullscreen() {
-                                Ok(true) => {
-                                    let _ = window.set_fullscreen(false);
-                                    log::info!("Exited fullscreen via global shortcut");
+                if let Err(e) =
+                    app.global_shortcut()
+                        .on_shortcut(shortcut, move |_app, _shortcut, event| {
+                            if event.state == ShortcutState::Pressed {
+                                log::info!("Global shortcut Ctrl+Alt+F triggered");
+                                if let Some(window) = app_handle.get_webview_window("main") {
+                                    match window.is_fullscreen() {
+                                        Ok(true) => {
+                                            let _ = window.set_fullscreen(false);
+                                            log::info!("Exited fullscreen via global shortcut");
+                                        }
+                                        Ok(false) => {
+                                            let _ = window.set_fullscreen(true);
+                                            log::info!("Entered fullscreen via global shortcut");
+                                        }
+                                        Err(e) => {
+                                            log::error!("Failed to get fullscreen state: {}", e)
+                                        }
+                                    }
                                 }
-                                Ok(false) => {
-                                    let _ = window.set_fullscreen(true);
-                                    log::info!("Entered fullscreen via global shortcut");
-                                }
-                                Err(e) => log::error!("Failed to get fullscreen state: {}", e),
                             }
-                        }
-                    }
-                }) {
+                        })
+                {
                     log::error!("Failed to register global shortcut: {}", e);
                 } else {
                     log::info!("Global shortcut Ctrl+Alt+F registered successfully");

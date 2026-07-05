@@ -746,18 +746,26 @@ function bindGlobalEvents() {
             }
         }
 
-        // Escape - Exit fullscreen (so users aren't stuck once the native menu is hidden)
+        // Escape - Exit fullscreen (so users aren't stuck once the native menu is hidden).
+        // preventDefault() MUST run synchronously, before any await. The original
+        // ordering (await isFullscreen() → preventDefault → toggle) pushed
+        // preventDefault out of the synchronous handler window, so on Windows
+        // WebView2 + remove_menu() focus race consumed the event before JS could
+        // act on it. Moving preventDefault to the top of the branch fixes that.
+        // We still check isFullscreen() so ESC stays a no-op when the window
+        // isn't fullscreen — toggle_fullscreen would otherwise toggle us INTO
+        // fullscreen on a stray ESC.
         if (e.key === 'Escape') {
+            e.preventDefault();
             try {
                 if (window.__TAURI__?.window?.getCurrentWindow) {
                     const isFs = await window.__TAURI__.window.getCurrentWindow().isFullscreen();
-                    if (isFs) {
-                        e.preventDefault();
+                    if (isFs && window.__TAURI__?.core?.invoke) {
                         await window.__TAURI__.core.invoke('toggle_fullscreen');
                     }
                 }
             } catch (err) {
-                // Ignore — Escape may not be wired in every platform.
+                console.error('[frontend] ESC exit fullscreen failed:', err);
             }
         }
 
