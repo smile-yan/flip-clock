@@ -55,9 +55,7 @@ pub fn create_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>>
                 .build(app)?,
         )
     } else {
-        window_builder.item(
-            &MenuItemBuilder::with_id("fullscreen", "全屏").build(app)?,
-        )
+        window_builder.item(&MenuItemBuilder::with_id("fullscreen", "全屏").build(app)?)
     };
     let window_menu = window_builder.build()?;
 
