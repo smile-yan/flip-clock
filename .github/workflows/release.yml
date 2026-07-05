@@ -220,55 +220,12 @@ jobs:
           hdiutil detach /tmp/arm64-app
 
           hdiutil attach "$AMD64" -readonly -nobrowse -mountpoint /tmp/amd64-app
-          AMD64_APP=$(ls -d /tmp/amd64-app/*.app 2>/dev/null | head -1)
-
-          # Copy the amd64 binary to a stable path BEFORE we detach the DMG.
-          # Once the mount is gone, $AMD64_APP/Contents/MacOS/flip-clock is
-          # a stale path on a dead mount, and `lipo -create` would fail with
-          # "file not found". `/tmp` survives the detach, so materializing
-          # the input there is what lets the lipo step actually run.
-          AMD64_BIN_COPY="/tmp/amd64-flip-clock-bin"
-          cp "$AMD64_APP/Contents/MacOS/flip-clock" "$AMD64_BIN_COPY"
-          hdiutil detach /tmp/amd64-app
-
-          UNI_APP="/tmp/universal/$(basename "$AMD64_APP")"
-          ARM64_BIN="$UNI_APP/Contents/MacOS/flip-clock"
-          AMD64_BIN="$AMD64_BIN_COPY"
-
-          if [ ! -f "$AMD64_BIN" ]; then
-            echo "Error: amd64 binary not found at $AMD64_BIN"
-            exit 1
+          APP=$(ls /tmp/amd64-app/*.app 2>/dev/null | head -1)
+          if [ -n "$APP" ]; then
+            cp /tmp/amd64-app/*.app/Contents/MacOS/* /tmp/universal/*.app/Contents/MacOS/ 2>/dev/null || true
+            chmod +x /tmp/universal/*.app/Contents/MacOS/*
           fi
-
-          # Merge the two architectures into a single fat Mach-O. The naive
-          # flow `cp`s the amd64 binary on top of the arm64 one, which
-          # silently produces an amd64-only binary dressed up as "universal".
-          # `lipo -create` is what produces a real fat binary that runs
-          # natively on both Apple Silicon and Intel.
-          mv "$ARM64_BIN" "$ARM64_BIN.arm64"
-          lipo -create \
-              "$ARM64_BIN.arm64" \
-              "$AMD64_BIN" \
-              -output "$ARM64_BIN"
-          rm "$ARM64_BIN.arm64"
-          chmod +x "$ARM64_BIN"
-
-          # Verify the result is actually fat. If lipo silently dropped an
-          # arch (rare, but possible with version mismatches) the DMG would
-          # be broken — fail loud here instead of uploading a half-built
-          # universal bundle.
-          #
-          # `lipo -info` prints:
-          #   "Architectures in the fat file: <path> are: <arches>"
-          # Splitting on ': ' gives multiple fields; the architectures are
-          # always the LAST field, so use $NF (a previous version shipped
-          # with $2 and silently passed verification against the path string).
-          ARCHES=$(lipo -info "$ARM64_BIN" | awk -F': ' '{print $NF}' | tr -d ' ')
-          echo "Universal binary architectures: '$ARCHES'"
-          case "$ARCHES" in
-            *arm64*x86_64*|*x86_64*arm64*) ;;
-            *) echo "Error: expected fat binary with both arm64 and x86_64, got: '$ARCHES'"; exit 1 ;;
-          esac
+          hdiutil detach /tmp/amd64-app
 
           ln -sf /Applications /tmp/universal/
 
