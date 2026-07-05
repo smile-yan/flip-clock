@@ -783,6 +783,15 @@ function bindGlobalEvents() {
         window.__TAURI__.event.listen('check-updates', () => {
             checkForUpdates();
         });
+
+        // Global shortcut Ctrl+Alt+F from Rust backend (Windows/Linux)
+        window.__TAURI__.event.listen('toggle-fullscreen-shortcut', async () => {
+            try {
+                await window.__TAURI__.core.invoke('toggle_fullscreen');
+            } catch (err) {
+                console.error('[frontend] Toggle fullscreen from global shortcut failed:', err);
+            }
+        });
     }
 }
 
