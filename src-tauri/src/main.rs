@@ -298,6 +298,51 @@ fn main() {
                 }
             }
 
+            // Register ESC as a global shortcut (Windows/Linux only).
+            // On Windows, once the window is fullscreen the WebView2 can lose
+            // focus (notably after remove_menu() during the Resized handler) and
+            // the JS keydown listener never sees the ESC key — leaving the user
+            // stuck. Capturing ESC at the OS layer via the global-shortcut
+            // plugin bypasses that race entirely. We also emit an
+            // `escape-pressed` event so the frontend can still close any open
+            // settings modal (the OS-level capture means the keydown listener
+            // in the WebView no longer fires for ESC).
+            #[cfg(not(target_os = "macos"))]
+            {
+                let shortcut = Shortcut::new(None, Code::Escape);
+                let app_handle = app.handle().clone();
+                if let Err(e) =
+                    app.global_shortcut()
+                        .on_shortcut(shortcut, move |_app, _shortcut, event| {
+                            if event.state == ShortcutState::Pressed {
+                                log::info!("Global shortcut ESC triggered");
+                                // Notify frontend first so modals close even
+                                // when the window isn't fullscreen.
+                                let _ = app_handle.emit("escape-pressed", ());
+                                if let Some(window) = app_handle.get_webview_window("main") {
+                                    match window.is_fullscreen() {
+                                        Ok(true) => {
+                                            let _ = window.set_fullscreen(false);
+                                            log::info!("Exited fullscreen via global shortcut ESC");
+                                        }
+                                        Ok(false) => {
+                                            // Not fullscreen — frontend already
+                                            // received the event for modal close.
+                                        }
+                                        Err(e) => {
+                                            log::error!("Failed to get fullscreen state: {}", e)
+                                        }
+                                    }
+                                }
+                            }
+                        })
+                {
+                    log::error!("Failed to register ESC global shortcut: {}", e);
+                } else {
+                    log::info!("Global shortcut ESC registered successfully");
+                }
+            }
+
             // Get the main window and set up close handler
             if let Some(window) = app.get_webview_window("main") {
                 // Set window size to half of screen (delayed to ensure window is ready)
