@@ -1,0 +1,19 @@
+# 将所有 .rs 文件明确指定为 Rust 语言
+*.rs linguist-language=Rust
+
+# 忽略依赖目录和构建产物（这些通常体积大且不是你的代码）
+/target/ linguist-vendored
+/dist/ linguist-vendored
+/node_modules/ linguist-vendored
+
+# 将前端相关文件标记为 vendored（视为第三方代码，不计入统计）
+*.js linguist-vendored
+*.ts linguist-vendored
+*.tsx linguist-vendored
+*.jsx linguist-vendored
+*.css linguist-vendored
+*.html linguist-vendored
+*.json linguist-vendored
+
+# 如果前端文件在你的项目中占比很小，也可以直接禁用它
+# *.js linguist-detectable=false
