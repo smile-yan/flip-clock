@@ -800,6 +800,17 @@ function bindGlobalEvents() {
                 console.error('[frontend] Toggle fullscreen from global shortcut failed:', err);
             }
         });
+
+        // ESC captured at the OS level by the global-shortcut plugin
+        // (Windows/Linux). The OS consumes the key before the WebView sees it,
+        // so this event is the only path that can close a settings modal on
+        // those platforms. The Rust handler also exits fullscreen on its own;
+        // we only handle the modal-close side here.
+        window.__TAURI__.event.listen('escape-pressed', () => {
+            if (modal.classList.contains('visible')) {
+                closeSettings();
+            }
+        });
     }
 }
 
