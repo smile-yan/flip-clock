@@ -195,10 +195,23 @@
             // === 关于弹窗控制 ===
             const aboutOverlay = document.getElementById('aboutOverlay')
             const aboutModal = document.getElementById('aboutModal')
+            const aboutVersionEl = document.getElementById('aboutVersion')
 
             function openAbout() {
                 aboutOverlay.classList.add('visible')
                 aboutModal.classList.add('visible')
+                // 从 Tauri command 拉真实版本号（tauri.conf.json 是版本号来源，
+                // 见 memory [[project-overview]]），覆盖 index.html 里写死的
+                // "版本 1.0.0"。失败时保留默认文本，不阻塞弹窗打开。
+                if (aboutVersionEl && window.__TAURI__ && window.__TAURI__.core) {
+                    window.__TAURI__.core.invoke('get_app_version')
+                        .then(function (v) {
+                            if (aboutVersionEl) aboutVersionEl.textContent = '版本 ' + v
+                        })
+                        .catch(function (err) {
+                            console.error('[frontend] get_app_version failed:', err)
+                        })
+                }
             }
 
             function closeAbout() {

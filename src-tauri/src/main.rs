@@ -156,6 +156,15 @@ fn get_release_url() -> String {
     "https://github.com/smile-yan/flip-clock/releases/latest".to_string()
 }
 
+/// Return the app version pulled from tauri.conf.json via Tauri Manager API
+/// instead of a hardcoded string. tauri.conf.json is the source of truth for
+/// the version (memory [[project-overview]]), and `package_info()` reads
+/// straight from the runtime context built by `tauri::generate_context!()`.
+#[tauri::command]
+fn get_app_version<R: Runtime>(app: tauri::AppHandle<R>) -> String {
+    app.package_info().version.to_string()
+}
+
 #[tauri::command]
 fn get_available_styles() -> Vec<String> {
     available_styles()
@@ -243,7 +252,8 @@ fn main() {
             get_available_themes,
             get_available_styles,
             get_available_time_formats,
-            get_release_url
+            get_release_url,
+            get_app_version
         ])
         .setup(|app| {
             log::info!("App setup complete");
