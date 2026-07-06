@@ -14,5 +14,13 @@ Cargo.lock
 .AppleDouble
 .LSOverride
 
+# npm lock files (this project has no runtime npm dependencies)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
 # Tauri
 src-tauri/target/
+
+# npm packaging artifacts
+/npm-packages/

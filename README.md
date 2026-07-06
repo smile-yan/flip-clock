@@ -60,6 +60,21 @@ cargo build --release
 cd src-tauri && cargo run
 ```
 
+### Install from npm
+
+You can also install the prebuilt binary directly via npm:
+
+```bash
+# Install globally
+npm install -g flip-clock
+
+# Or install locally and run with npx
+npm install flip-clock
+npx flip-clock
+```
+
+Supported platforms: macOS (Intel/Apple Silicon), Linux (x64), Windows (x64).
+
 ## Configuration
 
 Configuration is stored at:
@@ -94,6 +109,13 @@ Default config:
 ```
 flip-clock/
 ├── Cargo.toml              # Rust workspace
+├── package.json            # npm package metadata
+├── bin/
+│   └── flip-clock.js       # npm entrypoint wrapper
+├── scripts/
+│   ├── postinstall.js      # Copies binary to ~/.flip-clock/bin
+│   ├── preuninstall.js     # Cleans up ~/.flip-clock/bin
+│   └── build-npm-packages.js  # Builds platform npm packages
 ├── src-tauri/
 │   ├── Cargo.toml          # Tauri app config
 │   ├── build.rs            # Build script
@@ -170,6 +192,7 @@ cargo tauri build
 # Update version in:
 # - src-tauri/Cargo.toml
 # - src-tauri/tauri.conf.json
+# - package.json
 
 # Create and push a tag
 git tag v1.0.0
@@ -180,6 +203,9 @@ The release workflow will automatically:
 1. Build for all platforms
 2. Package macOS DMG as universal binary
 3. Create a draft GitHub Release with artifacts
+4. Publish platform-specific binary packages and the main package to npm
+
+> **Note:** Publishing to npm requires an `NPM_TOKEN` repository secret.
 
 ## License
 

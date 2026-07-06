@@ -114,6 +114,36 @@ jobs:
           cd src-tauri
           cargo tauri build --target ${{ matrix.arch }}
 
+      - name: Stage raw binary for npm packaging
+        shell: bash
+        run: |
+          case "${{ matrix.arch }}" in
+            aarch64-apple-darwin) npm_arch=arm64 ;;
+            x86_64-apple-darwin)  npm_arch=x64 ;;
+            x86_64-unknown-linux-gnu) npm_arch=x64 ;;
+            x86_64-pc-windows-msvc) npm_arch=x64 ;;
+            *) npm_arch="${{ matrix.arch }}" ;;
+          esac
+
+          mkdir -p binary-staging
+          src="src-tauri/target/${{ matrix.arch }}/release/flip-clock"
+          dst="binary-staging/flip-clock-${{ matrix.platform }}-${npm_arch}"
+
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            src="${src}.exe"
+            dst="${dst}.exe"
+          fi
+
+          cp "$src" "$dst"
+          chmod +x "$dst"
+
+      - name: Upload raw binary artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.APP_NAME }}-${{ github.ref_name }}-${{ matrix.platform }}-${{ matrix.arch }}-binary
+          path: binary-staging/*
+          if-no-files-found: error
+
       - name: Rename artifacts to v-tag format
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
@@ -276,3 +306,65 @@ jobs:
             release-assets/rpm/*.rpm
             release-assets/msi/*.msi
             release-assets/*.dmg
+
+  publish-npm:
+    name: Publish npm packages
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Sync package.json version with git tag
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.version = '${VERSION}';
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+      - name: Download raw binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ env.APP_NAME }}-${{ github.ref_name }}-*-binary
+          path: binaries
+          merge-multiple: true
+
+      - name: Build npm packages
+        run: |
+          set -euo pipefail
+          mkdir -p release-binaries
+          shopt -s nullglob
+          for f in binaries/flip-clock-*; do
+            # The staging step already names files as flip-clock-<os>-<arch>[.exe].
+            cp "$f" "release-binaries/$(basename "$f")"
+          done
+          shopt -u nullglob
+          chmod +x release-binaries/flip-clock-* || true
+          node scripts/build-npm-packages.js release-binaries npm-packages
+
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          for pkg in npm-packages/flip-clock-*; do
+            npm publish "$pkg" --access public
+          done
+
+      - name: Publish main package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish npm-packages/flip-clock --access public
