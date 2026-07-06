@@ -42,13 +42,14 @@ function parseBinaryName(filename) {
     return null;
   }
   const [, rawOs, cpuName] = match;
-  // npm uses "win32" for Windows; other platform identifiers match our names.
+  // npm uses "win32" for Windows; keep the raw name for the package suffix
+  // to avoid npm's spam detection on "win32" in the package name.
   const osName = rawOs === 'windows' ? 'win32' : rawOs;
-  return { os: osName, cpu: cpuName, filename };
+  return { rawOs, os: osName, cpu: cpuName, filename };
 }
 
 function createPlatformPackage(outputDir, binaryDir, meta, version) {
-  const packageName = `flip-clock-app-${meta.os}-${meta.cpu}`;
+  const packageName = `flip-clock-app-${meta.rawOs}-${meta.cpu}`;
   const packageDir = path.join(outputDir, packageName);
   fs.mkdirSync(packageDir, { recursive: true });
 

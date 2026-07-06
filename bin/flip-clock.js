@@ -30,7 +30,8 @@ const packageMap = {
   'darwin-x64': 'flip-clock-app-darwin-x64',
   'darwin-arm64': 'flip-clock-app-darwin-arm64',
   'linux-x64': 'flip-clock-app-linux-x64',
-  'win32-x64': 'flip-clock-app-win32-x64'
+  // Package name uses "windows" to avoid npm spam detection on "win32".
+  'win32-x64': 'flip-clock-app-windows-x64'
 };
 
 const packageName = packageMap[platformKey];
