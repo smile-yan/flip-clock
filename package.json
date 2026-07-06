@@ -1,19 +1,19 @@
 {
   "name": "flip-clock",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "A minimalist, open-source desktop flip clock built with Tauri",
   "bin": {
-    "flip-clock": "./bin/flip-clock.js"
+    "flip-clock": "bin/flip-clock.js"
   },
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
     "preuninstall": "node scripts/preuninstall.js"
   },
   "optionalDependencies": {
-    "flip-clock-darwin-x64": "1.0.18",
-    "flip-clock-darwin-arm64": "1.0.18",
-    "flip-clock-linux-x64": "1.0.18",
-    "flip-clock-win32-x64": "1.0.18"
+    "flip-clock-darwin-x64": "1.0.19",
+    "flip-clock-darwin-arm64": "1.0.19",
+    "flip-clock-linux-x64": "1.0.19",
+    "flip-clock-win32-x64": "1.0.19"
   },
   "files": [
     "bin",
@@ -30,7 +30,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/smile-yan/flip-clock"
+    "url": "git+https://github.com/smile-yan/flip-clock.git"
   },
   "bugs": {
     "url": "https://github.com/smile-yan/flip-clock/issues"

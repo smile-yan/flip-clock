@@ -60,7 +60,7 @@ function createPlatformPackage(outputDir, binaryDir, meta, version) {
     license: 'MIT',
     repository: {
       type: 'git',
-      url: 'https://github.com/smile-yan/flip-clock'
+      url: 'git+https://github.com/smile-yan/flip-clock.git'
     }
   };
 
