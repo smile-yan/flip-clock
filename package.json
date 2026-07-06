@@ -1,6 +1,6 @@
 {
   "name": "flip-clock-app",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "A minimalist, open-source desktop flip clock built with Tauri",
   "bin": {
     "flip-clock": "bin/flip-clock.js"
@@ -10,10 +10,10 @@
     "preuninstall": "node scripts/preuninstall.js"
   },
   "optionalDependencies": {
-    "flip-clock-app-darwin-x64": "1.0.20",
-    "flip-clock-app-darwin-arm64": "1.0.20",
-    "flip-clock-app-linux-x64": "1.0.20",
-    "flip-clock-app-win32-x64": "1.0.20"
+    "flip-clock-app-darwin-x64": "1.0.21",
+    "flip-clock-app-darwin-arm64": "1.0.21",
+    "flip-clock-app-linux-x64": "1.0.21",
+    "flip-clock-app-win32-x64": "1.0.21"
   },
   "files": [
     "bin",

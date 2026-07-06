@@ -35,12 +35,15 @@ function parseBinaryName(filename) {
   //   flip-clock-darwin-x64
   //   flip-clock-linux-x64
   //   flip-clock-win32-x64.exe
+  //   flip-clock-windows-x64.exe (mapped to win32 for npm)
   const base = filename.replace(/\.exe$/i, '');
   const match = base.match(/^flip-clock-([^-]+)-(.+)$/);
   if (!match) {
     return null;
   }
-  const [, osName, cpuName] = match;
+  const [, rawOs, cpuName] = match;
+  // npm uses "win32" for Windows; other platform identifiers match our names.
+  const osName = rawOs === 'windows' ? 'win32' : rawOs;
   return { os: osName, cpu: cpuName, filename };
 }
 
@@ -49,11 +52,15 @@ function createPlatformPackage(outputDir, binaryDir, meta, version) {
   const packageDir = path.join(outputDir, packageName);
   fs.mkdirSync(packageDir, { recursive: true });
 
+  // The launcher/postinstall scripts expect a normalized binary name inside
+  // the package: "flip-clock" on Unix, "flip-clock.exe" on Windows.
+  const destFilename = meta.os === 'win32' ? 'flip-clock.exe' : 'flip-clock';
+
   const packageJson = {
     name: packageName,
     version,
     description: `${meta.os} ${meta.cpu} binary for flip-clock-app`,
-    files: [meta.filename],
+    files: [destFilename],
     os: [meta.os],
     cpu: [meta.cpu],
     author: 'smileyan',
@@ -70,7 +77,7 @@ function createPlatformPackage(outputDir, binaryDir, meta, version) {
   );
 
   const sourcePath = path.join(binaryDir, meta.filename);
-  const targetPath = path.join(packageDir, meta.filename);
+  const targetPath = path.join(packageDir, destFilename);
   fs.copyFileSync(sourcePath, targetPath);
   fs.chmodSync(targetPath, '755');
 
