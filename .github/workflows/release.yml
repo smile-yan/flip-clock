@@ -359,7 +359,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
-          for pkg in npm-packages/flip-clock-*; do
+          for pkg in npm-packages/flip-clock-app-*; do
             npm publish "./$pkg" --access public
           done
 
@@ -367,4 +367,4 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          npm publish ./npm-packages/flip-clock --access public
+          npm publish ./npm-packages/flip-clock-app --access public

@@ -1,6 +1,6 @@
 [package]
 name = "flip-clock"
-version = "1.0.19"
+version = "1.0.20"
 description = "A minimalist, open-source desktop flip clock"
 authors = ["smileyan"]
 edition = "2021"

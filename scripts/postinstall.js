@@ -23,10 +23,10 @@ try {
   }
 
   const packageMap = {
-    'darwin-x64': 'flip-clock-darwin-x64',
-    'darwin-arm64': 'flip-clock-darwin-arm64',
-    'linux-x64': 'flip-clock-linux-x64',
-    'win32-x64': 'flip-clock-win32-x64'
+    'darwin-x64': 'flip-clock-app-darwin-x64',
+    'darwin-arm64': 'flip-clock-app-darwin-arm64',
+    'linux-x64': 'flip-clock-app-linux-x64',
+    'win32-x64': 'flip-clock-app-win32-x64'
   };
 
   const packageName = packageMap[platformKey];

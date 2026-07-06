@@ -45,14 +45,14 @@ function parseBinaryName(filename) {
 }
 
 function createPlatformPackage(outputDir, binaryDir, meta, version) {
-  const packageName = `flip-clock-${meta.os}-${meta.cpu}`;
+  const packageName = `flip-clock-app-${meta.os}-${meta.cpu}`;
   const packageDir = path.join(outputDir, packageName);
   fs.mkdirSync(packageDir, { recursive: true });
 
   const packageJson = {
     name: packageName,
     version,
-    description: `${meta.os} ${meta.cpu} binary for flip-clock`,
+    description: `${meta.os} ${meta.cpu} binary for flip-clock-app`,
     files: [meta.filename],
     os: [meta.os],
     cpu: [meta.cpu],
@@ -78,7 +78,7 @@ function createPlatformPackage(outputDir, binaryDir, meta, version) {
 }
 
 function createMainPackage(outputDir, platformDeps, version) {
-  const mainPackageDir = path.join(outputDir, 'flip-clock');
+  const mainPackageDir = path.join(outputDir, 'flip-clock-app');
   fs.mkdirSync(mainPackageDir, { recursive: true });
 
   const mainPackage = readMainPackageJson();
@@ -155,8 +155,9 @@ function main() {
     console.log(`Created platform package: ${packageName}`);
   }
 
-  createMainPackage(resolvedOutputDir, platformDeps, version);
-  console.log(`Created main package: flip-clock@${version}`);
+  const mainPackageDir = createMainPackage(resolvedOutputDir, platformDeps, version);
+  const mainPackageName = readMainPackageJson().name;
+  console.log(`Created main package: ${mainPackageName}@${version}`);
   console.log(`Output directory: ${resolvedOutputDir}`);
 }
 

@@ -66,10 +66,10 @@ You can also install the prebuilt binary directly via npm:
 
 ```bash
 # Install globally
-npm install -g flip-clock
+npm install -g flip-clock-app
 
 # Or install locally and run with npx
-npm install flip-clock
+npm install flip-clock-app
 npx flip-clock
 ```
 
