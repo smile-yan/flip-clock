@@ -11,6 +11,9 @@
   <em>24h/12h Display · Multiple Themes · Pure CSS Animation · Cross-Platform</em>
 </p>
 
+<img width="1512" alt="flip-clock-demo" src="https://github.com/user-attachments/assets/e6665c76-1c44-4741-b379-d5c1eb93a205" />
+
+
 ---
 
 ## Features
