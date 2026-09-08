@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>翻转时钟 Flip Clock · 简洁优雅的翻页时钟</title>
+<meta name="description" content="翻转时钟（Flip Clock）——一个简洁、优雅、开源的翻页时钟桌面应用。支持 macOS、Windows 与 Linux，纯 CSS 翻页动画，本地优先。">
+<style>
+  :root {
+    --bg: #0b0e13;
+    --bg-soft: #10141c;
+    --panel: #141924;
+    --panel-2: #1a2030;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.14);
+    --text: #e9edf4;
+    --muted: #9aa4b4;
+    --accent: #e7d9b4;
+    --accent-strong: #f3e8c8;
+    --teal: #82d8c7;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue",
+                 "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(231, 217, 180, 0.10), transparent 60%),
+      radial-gradient(900px 500px at 85% 10%, rgba(130, 216, 199, 0.08), transparent 55%),
+      var(--bg);
+    min-height: 100vh;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Header ---------- */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+  .brand svg { width: 26px; height: 26px; border-radius: 7px; }
+  .brand .dim { color: var(--muted); font-weight: 500; margin-left: 2px; }
+  .gh-link {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 14px; color: var(--muted);
+    padding: 7px 14px; border: 1px solid var(--border); border-radius: 999px;
+    transition: color .2s, border-color .2s;
+  }
+  .gh-link:hover { color: var(--text); border-color: var(--border-strong); }
+
+  /* ---------- Hero ---------- */
+  .hero { text-align: center; padding: 56px 0 40px; }
+  .hero-icon {
+    width: 108px; height: 108px; margin: 0 auto 26px;
+    filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.5));
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  .hero h1 {
+    margin: 0 0 10px; font-size: 46px; letter-spacing: 1px; font-weight: 800;
+    background: linear-gradient(180deg, #fff 20%, var(--accent) 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .en { font-size: 17px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; }
+  .hero .tagline { margin: 14px auto 0; max-width: 520px; color: var(--muted); font-size: 16px; }
+
+  .cta { margin-top: 30px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 13px 26px; border-radius: 999px; font-size: 15px; font-weight: 600;
+    border: 1px solid transparent; cursor: pointer; transition: transform .15s, box-shadow .2s, background .2s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary {
+    background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+    color: #1a1408; box-shadow: 0 10px 30px rgba(231, 217, 180, 0.18);
+  }
+  .btn.primary:hover { box-shadow: 0 14px 36px rgba(231, 217, 180, 0.28); }
+  .btn.ghost {
+    background: transparent; color: var(--text); border-color: var(--border-strong);
+  }
+  .btn.ghost:hover { background: rgba(255, 255, 255, 0.05); }
+
+  .hero-meta { margin-top: 22px; color: var(--muted); font-size: 13px; }
+  .hero-meta .chip {
+    display: inline-block; padding: 2px 10px; margin: 0 3px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 999px; font-size: 12px;
+  }
+  .hero-meta b { color: var(--accent); font-weight: 600; }
+
+  /* ---------- Section headings ---------- */
+  section { padding: 52px 0; }
+  .sec-title { text-align: center; font-size: 28px; font-weight: 700; margin: 0 0 8px; }
+  .sec-sub { text-align: center; color: var(--muted); font-size: 14px; margin: 0 0 36px; }
+
+  /* ---------- Downloads ---------- */
+  #osHint {
+    text-align: center; font-size: 14px; color: var(--teal); margin: -20px 0 28px;
+    min-height: 22px;
+  }
+  .dl-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;
+  }
+  @media (max-width: 800px) { .dl-grid { grid-template-columns: 1fr; } }
+
+  .dl-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 20px; transition: border-color .2s, transform .2s, box-shadow .2s;
+    position: relative;
+  }
+  .dl-card:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+  .dl-card.recommended {
+    border-color: rgba(130, 216, 199, 0.5);
+    box-shadow: 0 0 0 1px rgba(130, 216, 199, 0.25), 0 18px 46px rgba(0, 0, 0, 0.35);
+  }
+  .dl-card .badge {
+    position: absolute; top: -11px; left: 18px;
+    background: var(--teal); color: #06231e; font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px; letter-spacing: 1px;
+  }
+  .dl-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .dl-icon { font-size: 22px; line-height: 1; }
+  .dl-name { font-size: 17px; font-weight: 700; }
+
+  .dl-items { display: flex; flex-direction: column; gap: 10px; }
+  .dl-btn {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; border-radius: 11px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    font-size: 13.5px; color: var(--text); transition: background .2s, border-color .2s;
+  }
+  .dl-btn:hover { background: #1f2838; border-color: var(--border-strong); }
+  .dl-btn .ext {
+    font-size: 11px; font-weight: 700; color: var(--muted);
+    background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border);
+    padding: 2px 7px; border-radius: 6px; letter-spacing: .5px;
+  }
+
+  .dl-note { text-align: center; margin-top: 26px; color: var(--muted); font-size: 13px; }
+  .dl-note code {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 2px 8px; font-size: 12.5px; color: var(--accent);
+  }
+
+  /* ---------- Features ---------- */
+  .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 800px) { .feat-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 520px) { .feat-grid { grid-template-columns: 1fr; } }
+  .feat {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 18px;
+  }
+  .feat .t { font-weight: 600; font-size: 14.5px; margin-bottom: 6px; }
+  .feat .d { color: var(--muted); font-size: 13px; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--border); padding: 28px 0 40px;
+    text-align: center; color: var(--muted); font-size: 13px;
+  }
+  footer a { color: var(--accent); }
+
+  /* ============================================================
+     Fullscreen flip clock overlay
+  ============================================================ */
+  .clock-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    background: #05070a;
+    color: #f2efe4;
+  }
+  .clock-overlay.open { display: flex; }
+  .clock-overlay:fullscreen { width: 100vw; height: 100vh; background: #05070a; }
+
+  .clock-stage { text-align: center; user-select: none; }
+
+  .clock-date { font-size: clamp(14px, 2.4vmin, 20px); color: #9aa4b4; margin-bottom: clamp(10px, 3vmin, 26px); }
+  .clock-motto { margin-top: clamp(12px, 3.4vmin, 28px); font-size: clamp(13px, 2.2vmin, 18px); color: #c9b98f; }
+
+  .clock {
+    --digit-w: clamp(48px, 11vmin, 120px);
+    --digit-h: calc(var(--digit-w) * 1.36);
+    --card-face: linear-gradient(180deg, #1a2028 0%, #12161d 50%, #0d1117 100%);
+    --digit-text: #f2efe4;
+    display: flex; align-items: center; justify-content: center;
+    gap: calc(var(--digit-w) * 0.07);
+  }
+
+  .digit {
+    position: relative; width: var(--digit-w); height: var(--digit-h);
+    perspective: 800px; border-radius: calc(var(--digit-w) * 0.09);
+  }
+  .half {
+    position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden;
+    background: var(--card-face);
+  }
+  .half.top { top: 0; border-radius: calc(var(--digit-w)*0.09) calc(var(--digit-w)*0.09) 0 0; }
+  .half.bottom { bottom: 0; border-radius: 0 0 calc(var(--digit-w)*0.09) calc(var(--digit-w)*0.09); }
+
+  .num {
+    position: absolute; left: 0; width: 100%; height: 200%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "SF Mono", "Menlo", "Consolas", monospace;
+    font-size: calc(var(--digit-h) * 0.66);
+    font-weight: 700; color: var(--digit-text);
+    background: var(--card-face);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  }
+  .half.top .num { top: 0; }
+  .half.bottom .num { bottom: 0; }
+
+  /* hinge seam */
+  .half.top::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+    background: rgba(0, 0, 0, 0.65); z-index: 3;
+  }
+  .digit::after {
+    content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 1px;
+    background: rgba(255, 255, 255, 0.05); z-index: 4; transform: translateY(-0.5px); pointer-events: none;
+  }
+
+  /* flip cards */
+  .flip {
+    position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden;
+    background: var(--card-face); display: none; backface-visibility: hidden; z-index: 5;
+  }
+  .flip.animate { display: block; }
+  .flip.top-flip { top: 0; transform-origin: 50% 100%; border-radius: calc(var(--digit-w)*0.09) calc(var(--digit-w)*0.09) 0 0; }
+  .flip.bottom-flip { bottom: 0; transform-origin: 50% 0%; border-radius: 0 0 calc(var(--digit-w)*0.09) calc(var(--digit-w)*0.09); transform: rotateX(90deg); }
+  .flip.top-flip .num { top: 0; }
+  .flip.bottom-flip .num { bottom: 0; }
+
+  .flip.top-flip.animate { animation: flip-top 0.32s ease-in forwards; }
+  .flip.bottom-flip.animate { animation: flip-bottom 0.32s ease-out forwards; }
+  @keyframes flip-top { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
+  @keyframes flip-bottom { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
+
+  /* separator (colon) */
+  .separator {
+    height: var(--digit-h); width: calc(var(--digit-w) * 0.22);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: calc(var(--digit-h) * 0.30);
+  }
+  .separator .dot {
+    width: calc(var(--digit-w) * 0.10); height: calc(var(--digit-w) * 0.10);
+    border-radius: 50%; background: #f2efe4; opacity: 0.85;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 0%, 50% { opacity: 0.85; } 51%, 100% { opacity: 0.25; } }
+
+  .exit-fullscreen {
+    position: absolute; top: 18px; right: 18px;
+    background: rgba(255, 255, 255, 0.07); color: #cbd2de;
+    border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px;
+    padding: 8px 16px; font-size: 13px; cursor: pointer; transition: background .2s;
+  }
+  .exit-fullscreen:hover { background: rgba(255, 255, 255, 0.13); }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="brand">
+    <svg viewBox="0 0 1024 1024" aria-hidden="true">
+      <rect x="80" y="80" width="864" height="864" rx="188" fill="#141a22"/>
+      <rect x="214" y="236" width="596" height="552" rx="76" fill="#0b0f14"/>
+      <rect x="214" y="236" width="596" height="276" fill="#424957"/>
+      <rect x="214" y="512" width="596" height="276" fill="#161b22"/>
+      <rect x="214" y="507" width="596" height="10" fill="#05070a"/>
+      <text x="512" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="330" font-weight="700" fill="#e7d9b4">12</text>
+    </svg>
+    <span>翻转时钟 <span class="dim">Flip Clock</span></span>
+  </div>
+  <a class="gh-link" href="https://github.com/smile-yan/flip-clock" target="_blank" rel="noopener noreferrer">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.74.08-.74 1.21.09 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.8 5.63-5.47 5.93.43.37.81 1.1.81 2.22v3.29c0 .32.2.7.82.58A12 12 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+    GitHub
+  </a>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <svg class="hero-icon" viewBox="0 0 1024 1024" aria-label="flip-clock app icon">
+      <defs>
+        <linearGradient id="bg" x1="168" y1="112" x2="856" y2="912" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#273241"/><stop offset="0.48" stop-color="#141a22"/><stop offset="1" stop-color="#07090d"/>
+        </linearGradient>
+        <linearGradient id="cardTop" x1="248" y1="244" x2="776" y2="508" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#424957"/><stop offset="1" stop-color="#1b2028"/>
+        </linearGradient>
+        <linearGradient id="cardBottom" x1="248" y1="516" x2="776" y2="788" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#161b22"/><stop offset="1" stop-color="#07090d"/>
+        </linearGradient>
+        <linearGradient id="accent" x1="312" y1="300" x2="724" y2="752" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#f7f1df"/><stop offset="1" stop-color="#d7c9a3"/>
+        </linearGradient>
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="150%">
+          <feDropShadow dx="0" dy="30" stdDeviation="38" flood-color="#000000" flood-opacity="0.42"/>
+        </filter>
+        <clipPath id="cardClip"><rect x="214" y="236" width="596" height="552" rx="76"/></clipPath>
+      </defs>
+      <rect x="80" y="80" width="864" height="864" rx="188" fill="url(#bg)"/>
+      <g filter="url(#softShadow)">
+        <rect x="214" y="236" width="596" height="552" rx="76" fill="#0b0f14"/>
+        <g clip-path="url(#cardClip)">
+          <rect x="214" y="236" width="596" height="276" fill="url(#cardTop)"/>
+          <rect x="214" y="512" width="596" height="276" fill="url(#cardBottom)"/>
+          <rect x="214" y="507" width="596" height="10" fill="#05070a"/>
+          <path d="M276 236h448c42 0 76 34 76 76v33H200v-33c0-42 34-76 76-76Z" fill="#ffffff" opacity="0.08"/>
+        </g>
+        <rect x="188" y="455" width="56" height="74" rx="22" fill="#0a0d12"/>
+        <rect x="780" y="455" width="56" height="74" rx="22" fill="#0a0d12"/>
+        <text x="512" y="620" text-anchor="middle" font-family="Arial, sans-serif" font-size="330" font-weight="700" fill="url(#accent)">12</text>
+        <path d="M276 236h448c42 0 76 34 76 76v400c0 42-34 76-76 76H276c-42 0-76-34-76-76V312c0-42 34-76 76-76Z" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="4"/>
+      </g>
+      <circle cx="742" cy="248" r="22" fill="#82d8c7" opacity="0.86"/>
+      <circle cx="786" cy="292" r="9" fill="#82d8c7" opacity="0.55"/>
+    </svg>
+
+    <h1>翻转时钟</h1>
+    <div class="en">Flip Clock</div>
+    <p class="tagline">一个简洁、优雅、开源的翻页时钟桌面应用。纯 CSS 翻页动画，多主题，本地优先，无遥测。</p>
+
+    <div class="cta">
+      <a class="btn primary" href="#downloads">立即下载</a>
+      <button class="btn ghost" id="openClockBtn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+        全屏展示翻转时钟
+      </button>
+    </div>
+
+    <div class="hero-meta">
+      当前版本 <b id="versionText">v1.0.22</b>
+      <span class="chip">macOS</span><span class="chip">Windows</span><span class="chip">Linux</span>
+      <span class="chip">MIT 开源</span>
+    </div>
+  </section>
+
+  <section id="downloads">
+    <h2 class="sec-title">下载安装包</h2>
+    <p class="sec-sub">选择适合你操作系统的安装包，下载后即可运行</p>
+    <p id="osHint"></p>
+    <div class="dl-grid" id="downloadCards"></div>
+    <p class="dl-note">
+      也可以使用 npm 安装：<code>npm install -g flip-clock-app</code>
+      <br>若链接失效，请前往 <a href="https://github.com/smile-yan/flip-clock/releases" target="_blank" rel="noopener noreferrer">GitHub Releases</a> 手动下载。
+    </p>
+  </section>
+
+  <section>
+    <h2 class="sec-title">功能特性</h2>
+    <p class="sec-sub">轻量 · 纯粹 · 专注显示时间本身</p>
+    <div class="feat-grid">
+      <div class="feat"><div class="t">纯 CSS 翻页动画</div><div class="d">无外部依赖，顺滑的 3D 翻转效果。</div></div>
+      <div class="feat"><div class="t">10 款主题</div><div class="d">深色、浅色、米色、森林、日落、海洋等随心切换。</div></div>
+      <div class="feat"><div class="t">12 / 24 小时制</div><div class="d">一键切换时间格式，支持显示秒。</div></div>
+      <div class="feat"><div class="t">农历显示</div><div class="d">支持显示中文农历日期。</div></div>
+      <div class="feat"><div class="t">自定义座右铭</div><div class="d">在时钟下展示你自己的每日寄语。</div></div>
+      <div class="feat"><div class="t">本地优先</div><div class="d">无云、无遥测，一切数据只留在你的设备。</div></div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  © 2024 smile-yan · 基于 <a href="https://tauri.app/" target="_blank" rel="noopener noreferrer">Tauri</a> 构建 ·
+  <a href="https://github.com/smile-yan/flip-clock" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+  MIT License
+</footer>
+
+<!-- ============ 全屏翻转时钟 ============ -->
+<div class="clock-overlay" id="clockOverlay">
+  <div class="clock-stage">
+    <div class="clock-date" id="clockDate"></div>
+    <div class="clock" id="clock"></div>
+    <div class="clock-motto" id="clockMotto">君子三思而后行</div>
+  </div>
+  <button class="exit-fullscreen" id="exitBtn" type="button">退出全屏 · Esc</button>
+</div>
+
+<script>
+/* ============================================================
+   下载安装包
+============================================================ */
+const REPO = "https://github.com/smile-yan/flip-clock";
+const FALLBACK_VERSION = "1.0.22";
+let VERSION = FALLBACK_VERSION;
+
+const DOWNLOADS = [
+  { family: "macos", icon: "🍎", name: "macOS", items: [
+    { label: "通用版（Intel + Apple Silicon）", file: "macos-universal", ext: "dmg" },
+    { label: "Apple Silicon（M1 / M2 / M3）", file: "macos-arm64", ext: "dmg" },
+    { label: "Intel 芯片（x86_64）", file: "macos-x86_64", ext: "dmg" }
+  ]},
+  { family: "windows", icon: "🪟", name: "Windows", items: [
+    { label: "64 位安装程序", file: "windows-x86_64-setup", ext: "exe" }
+  ]},
+  { family: "linux", icon: "🐧", name: "Linux", items: [
+    { label: "Debian / Ubuntu", file: "linux-x86_64", ext: "deb" },
+    { label: "AppImage（通用免安装）", file: "linux-x86_64", ext: "AppImage" }
+  ]}
+];
+
+function downloadUrl(file, ext) {
+  return `${REPO}/releases/download/v${VERSION}/flip-clock-v${VERSION}-${file}.${ext}`;
+}
+
+async function resolveVersion() {
+  try {
+    const res = await fetch("https://api.github.com/repos/smile-yan/flip-clock/releases/latest");
+    if (res.ok) {
+      const data = await res.json();
+      const tag = (data.tag_name || "").replace(/^v/, "");
+      if (/^\d+\.\d+\.\d+/.test(tag)) { VERSION = tag; return; }
+    }
+  } catch (e) { /* 保持回退版本 */ }
+}
+
+function renderDownloads() {
+  const container = document.getElementById("downloadCards");
+  container.innerHTML = "";
+  DOWNLOADS.forEach(function (group) {
+    const card = document.createElement("div");
+    card.className = "dl-card";
+    card.dataset.family = group.family;
+    card.innerHTML =
+      '<div class="dl-head"><span class="dl-icon">' + group.icon + '</span>' +
+      '<span class="dl-name">' + group.name + '</span></div>' +
+      '<div class="dl-items">' +
+      group.items.map(function (it) {
+        return '<a class="dl-btn" href="' + downloadUrl(it.file, it.ext) + '" target="_blank" rel="noopener noreferrer">' +
+          '<span>' + it.label + '</span><span class="ext">' + it.ext.toUpperCase() + '</span></a>';
+      }).join("") +
+      '</div>';
+    container.appendChild(card);
+  });
+}
+
+function detectOS() {
+  const ua = navigator.userAgent || "";
+  let platform = "";
+  try { platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ""; }
+  catch (e) { platform = navigator.platform || ""; }
+  if (/Mac|iPhone|iPad|iPod/i.test(platform) || /Macintosh/i.test(ua)) return "macos";
+  if (/Win/i.test(platform) || /Windows/i.test(ua)) return "windows";
+  if (/Linux/i.test(platform) || /Linux/i.test(ua)) return "linux";
+  return "unknown";
+}
+
+function highlightRecommended() {
+  const os = detectOS();
+  const hint = document.getElementById("osHint");
+  const names = { macos: "macOS", windows: "Windows", linux: "Linux" };
+  if (os === "unknown") { hint.textContent = "未能识别您的系统，请手动选择下方的安装包。"; return; }
+  document.querySelectorAll(".dl-card").forEach(function (c) { c.classList.remove("recommended"); });
+  const target = document.querySelector('.dl-card[data-family="' + os + '"]');
+  if (target) {
+    target.classList.add("recommended");
+    const badge = document.createElement("span");
+    badge.className = "badge"; badge.textContent = "为你推荐";
+    target.insertBefore(badge, target.firstChild);
+  }
+  hint.textContent = "已根据您的系统（" + names[os] + "）为您高亮推荐。";
+}
+
+async function initDownloads() {
+  await resolveVersion();
+  document.getElementById("versionText").textContent = "v" + VERSION;
+  renderDownloads();
+  highlightRecommended();
+}
+
+/* ============================================================
+   全屏翻转时钟
+============================================================ */
+const clockEl = document.getElementById("clock");
+const dateEl = document.getElementById("clockDate");
+const digits = [];
+
+function buildClock() {
+  clockEl.innerHTML = "";
+  digits.length = 0;
+  // HH : MM : SS —— 6 位数字 + 2 个分隔符
+  for (let i = 0; i < 6; i++) {
+    if (i === 2 || i === 4) {
+      const sep = document.createElement("div");
+      sep.className = "separator";
+      sep.innerHTML = '<span class="dot"></span><span class="dot"></span>';
+      clockEl.appendChild(sep);
+    }
+    const d = document.createElement("div");
+    d.className = "digit";
+    d.dataset.value = "";
+    d.innerHTML =
+      '<div class="half top"><span class="num"></span></div>' +
+      '<div class="half bottom"><span class="num"></span></div>' +
+      '<div class="flip top-flip"><span class="num"></span></div>' +
+      '<div class="flip bottom-flip"><span class="num"></span></div>';
+    clockEl.appendChild(d);
+    digits.push(d);
+  }
+}
+
+function setDigit(el, val) {
+  el.querySelector(".half.top .num").textContent = val;
+  el.querySelector(".half.bottom .num").textContent = val;
+  el.dataset.value = val;
+}
+
+function updateDigit(el, newVal) {
+  const old = el.dataset.value;
+  if (old === newVal) return;
+  const top = el.querySelector(".half.top .num");
+  const bottom = el.querySelector(".half.bottom .num");
+  const tf = el.querySelector(".flip.top-flip");
+  const bf = el.querySelector(".flip.bottom-flip");
+  const tfNum = tf.querySelector(".num");
+  const bfNum = bf.querySelector(".num");
+
+  tfNum.textContent = old;
+  bfNum.textContent = newVal;
+
+  tf.classList.remove("animate");
+  bf.classList.remove("animate");
+  void tf.offsetWidth; // 强制回流以重新触发动画
+  tf.classList.add("animate");
+
+  setTimeout(function () {
+    top.textContent = newVal;
+    bottom.textContent = newVal;
+    tf.classList.remove("animate");
+    bf.classList.add("animate");
+    setTimeout(function () { bf.classList.remove("animate"); }, 320);
+  }, 320);
+
+  el.dataset.value = newVal;
+}
+
+function pad(n) { return String(n).padStart(2, "0"); }
+
+function formatDate(d) {
+  const days = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + " " + days[d.getDay()];
+}
+
+function tick() {
+  const now = new Date();
+  const str = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+  for (let i = 0; i < digits.length; i++) updateDigit(digits[i], str[i]);
+  dateEl.textContent = formatDate(now);
+}
+
+function startClock() {
+  buildClock();
+  const now = new Date();
+  const str = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
+  for (let i = 0; i < digits.length; i++) setDigit(digits[i], str[i]);
+  dateEl.textContent = formatDate(now);
+  setInterval(tick, 1000);
+}
+
+/* 全屏控制 */
+const overlay = document.getElementById("clockOverlay");
+const openBtn = document.getElementById("openClockBtn");
+const exitBtn = document.getElementById("exitBtn");
+
+openBtn.addEventListener("click", function () {
+  overlay.classList.add("open");
+  if (overlay.requestFullscreen) {
+    overlay.requestFullscreen().catch(function () { /* 不支持全屏时仍以铺满视口展示 */ });
+  }
+});
+
+exitBtn.addEventListener("click", function () {
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen();
+  } else {
+    overlay.classList.remove("open");
+  }
+});
+
+document.addEventListener("fullscreenchange", function () {
+  if (!document.fullscreenElement) overlay.classList.remove("open");
+});
+
+/* 启动 */
+startClock();
+initDownloads();
+</script>
+</body>
+</html>
