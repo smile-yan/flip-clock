@@ -79,7 +79,10 @@ fi
 # ---------------------------------------------------------------------------
 # Step 4 — Connectivity + login test.
 # ---------------------------------------------------------------------------
-SSH_OPTS=(-p "$PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o BatchMode=yes)
+# Port via -o (not -p): lowercase -p means "preserve times" in scp,
+# not "port" — it would swallow the port number as a source file. These
+# options are shared by both ssh and scp below.
+SSH_OPTS=(-o "Port=$PORT" -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 -o BatchMode=yes)
 
 DEST="$SSH_USERNAME@$SSH_HOST"
 echo "==> Testing SSH connectivity to $DEST:$PORT ..." >&2
@@ -146,18 +149,24 @@ run_scp() {
   fi
 }
 
+SCP_OUT="$(run_scp "$PROBE_LOCAL" "$DEST:$WEB_DEPLOY_PATH/$PROBE_REMOTE" 2>&1)" && SCP_RC=0 || SCP_RC=$?
 SCP_OK=0
-if run_scp "$PROBE_LOCAL" "$DEST:$WEB_DEPLOY_PATH/$PROBE_REMOTE" >/dev/null 2>&1; then
+if [[ "$SCP_RC" -eq 0 ]]; then
   if run_remote "$DEST" "test -f '$WEB_DEPLOY_PATH/$PROBE_REMOTE'" >/dev/null 2>&1; then
     SCP_OK=1
+  else
+    SCP_OUT="file landed but test -f on remote failed"
   fi
 fi
 run_remote "$DEST" "rm -f '$WEB_DEPLOY_PATH/$PROBE_REMOTE'" >/dev/null 2>&1 || true
 rm -f "$PROBE_LOCAL"
 
 if [[ "$SCP_OK" -ne 1 ]]; then
-  echo "::error::scp transfer to '$WEB_DEPLOY_PATH' on $DEST failed." >&2
+  echo "::error::scp transfer to '$WEB_DEPLOY_PATH' on $DEST failed (exit $SCP_RC)." >&2
   echo "::error::The deploy step uses scp with these exact options; check that they are valid for scp (not just ssh)." >&2
+  if [[ -n "$SCP_OUT" ]]; then
+    echo "::error::scp output: $SCP_OUT" >&2
+  fi
   exit 1
 fi
 
