@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>翻转时钟 Flip Clock · 简洁优雅的翻页时钟</title>
 <meta name="description" content="翻转时钟（Flip Clock）——一个简洁、优雅、开源的翻页时钟桌面应用。支持 macOS、Windows 与 Linux，纯 CSS 翻页动画，本地优先。">
+<meta name="theme-color" content="#0b0e13">
+<!-- 部署只发布 index.html 单文件，因此 favicon 用内联 SVG data URI，与页头品牌图标同一设计 -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='168' y1='112' x2='856' y2='912' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0' stop-color='%23273241'/%3E%3Cstop offset='.48' stop-color='%23141a22'/%3E%3Cstop offset='1' stop-color='%2307090d'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect x='80' y='80' width='864' height='864' rx='188' fill='url(%23g)'/%3E%3Crect x='214' y='236' width='596' height='552' rx='76' fill='%230b0f14'/%3E%3Crect x='214' y='236' width='596' height='276' fill='%23424957'/%3E%3Crect x='214' y='512' width='596' height='276' fill='%23161b22'/%3E%3Crect x='214' y='507' width='596' height='10' fill='%2305070a'/%3E%3Ctext x='512' y='620' text-anchor='middle' font-family='Arial,sans-serif' font-size='330' font-weight='700' fill='%23e7d9b4'%3E12%3C/text%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #0b0e13;
@@ -44,9 +47,11 @@
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
   /* ---------- Header ---------- */
-  header {
+  /* 用 header.wrap 提高优先级：否则 .wrap 的 padding: 0 24px 会把垂直留白覆盖为 0 */
+  header.wrap {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 0;
+    /* macOS 浏览器全屏时标签栏/工具栏悬在页面顶端，留白太小时 GitHub 链接会被挡住点不到 */
+    padding: 44px 24px 20px;
   }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
   .brand svg { width: 26px; height: 26px; border-radius: 7px; }
@@ -175,22 +180,22 @@
   /* ============================================================
      Fullscreen flip clock overlay
   ============================================================ */
-  .clock-overlay {
-    position: fixed; inset: 0; z-index: 1000;
-    display: none; flex-direction: column; align-items: center; justify-content: center;
+  .clock-overlay { position: fixed; inset: 0; z-index: 1000; display: none; }
+  .clock-overlay.open {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     background: #05070a;
     color: #f2efe4;
   }
-  .clock-overlay.open { display: flex; }
-  .clock-overlay:fullscreen { width: 100vw; height: 100vh; background: #05070a; }
+  .clock-overlay:fullscreen { width: 100%; height: 100%; background: #05070a; }
 
   .clock-stage { text-align: center; user-select: none; }
 
-  .clock-date { font-size: clamp(14px, 2.4vmin, 20px); color: #9aa4b4; margin-bottom: clamp(10px, 3vmin, 26px); }
-  .clock-motto { margin-top: clamp(12px, 3.4vmin, 28px); font-size: clamp(13px, 2.2vmin, 18px); color: #c9b98f; }
+  /* 与桌面端一致：时钟随屏幕等比放大铺满，而不是固定尺寸居中 */
+  .clock-date { font-size: clamp(15px, 2.6vmin, 34px); color: #9aa4b4; margin-bottom: clamp(10px, 3vmin, 30px); }
+  .clock-motto { margin-top: clamp(12px, 3.4vmin, 34px); font-size: clamp(13px, 2.4vmin, 30px); color: #c9b98f; }
 
   .clock {
-    --digit-w: clamp(48px, 11vmin, 120px);
+    --digit-w: min(12vw, 26vh);
     --digit-h: calc(var(--digit-w) * 1.36);
     --card-face: linear-gradient(180deg, #1a2028 0%, #12161d 50%, #0d1117 100%);
     --digit-text: #f2efe4;
@@ -200,7 +205,8 @@
 
   .digit {
     position: relative; width: var(--digit-w); height: var(--digit-h);
-    perspective: 800px; border-radius: calc(var(--digit-w) * 0.09);
+    /* 透视随卡片尺寸缩放，大屏小屏的翻转立体感一致 */
+    perspective: calc(var(--digit-h) * 2.6); border-radius: calc(var(--digit-w) * 0.09);
   }
   .half {
     position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden;
@@ -234,16 +240,20 @@
   /* flip cards */
   .flip {
     position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden;
-    background: var(--card-face); display: none; backface-visibility: hidden; z-index: 5;
+    background: var(--card-face); visibility: hidden; backface-visibility: hidden; z-index: 5;
+    will-change: transform;
   }
-  .flip.animate { display: block; }
+  .flip.animate { visibility: visible; }
   .flip.top-flip { top: 0; transform-origin: 50% 100%; border-radius: calc(var(--digit-w)*0.09) calc(var(--digit-w)*0.09) 0 0; }
   .flip.bottom-flip { bottom: 0; transform-origin: 50% 0%; border-radius: 0 0 calc(var(--digit-w)*0.09) calc(var(--digit-w)*0.09); transform: rotateX(90deg); }
   .flip.top-flip .num { top: 0; }
   .flip.bottom-flip .num { bottom: 0; }
 
-  .flip.top-flip.animate { animation: flip-top 0.32s ease-in forwards; }
-  .flip.bottom-flip.animate { animation: flip-bottom 0.32s ease-out forwards; }
+  /* 两段翻转由同一次 JS 触发、完全交给 CSS 时间线衔接（下半页用
+     animation-delay），翻转过程中 JS 不再改内容/切类，主线程繁忙时
+     卡片也不会停在 90° 等定时器 */
+  .flip.top-flip.animate { animation: flip-top 0.32s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards; }
+  .flip.bottom-flip.animate { animation: flip-bottom 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) 0.32s forwards; }
   @keyframes flip-top { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
   @keyframes flip-bottom { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
 
@@ -343,7 +353,7 @@
     <div class="hero-meta">
       当前版本 <b id="versionText">v1.0.22</b>
       <span class="chip">macOS</span><span class="chip">Windows</span><span class="chip">Linux</span>
-      <span class="chip">MIT 开源</span>
+      <span class="chip">完全免费</span><span class="chip">MIT 开源</span>
     </div>
   </section>
 
@@ -360,8 +370,10 @@
 
   <section>
     <h2 class="sec-title">功能特性</h2>
-    <p class="sec-sub">轻量 · 纯粹 · 专注显示时间本身</p>
+    <p class="sec-sub">完全免费 · 轻量 · 纯粹 · 专注显示时间本身</p>
     <div class="feat-grid">
+      <div class="feat"><div class="t">完全免费</div><div class="d">软件永久免费，无广告、无内购、无订阅，下载即用。</div></div>
+      <div class="feat"><div class="t">系统资源占用极少</div><div class="d">基于 Tauri 构建，安装包小，内存与 CPU 占用极低，长期挂机无负担。</div></div>
       <div class="feat"><div class="t">纯 CSS 翻页动画</div><div class="d">无外部依赖，顺滑的 3D 翻转效果。</div></div>
       <div class="feat"><div class="t">10 款主题</div><div class="d">深色、浅色、米色、森林、日落、海洋等随心切换。</div></div>
       <div class="feat"><div class="t">12 / 24 小时制</div><div class="d">一键切换时间格式，支持显示秒。</div></div>
@@ -524,24 +536,35 @@ function updateDigit(el, newVal) {
   const bottom = el.querySelector(".half.bottom .num");
   const tf = el.querySelector(".flip.top-flip");
   const bf = el.querySelector(".flip.bottom-flip");
-  const tfNum = tf.querySelector(".num");
-  const bfNum = bf.querySelector(".num");
 
-  tfNum.textContent = old;
-  bfNum.textContent = newVal;
+  // 先把静态下半页同步为上一次已提交的值（old）：若上一次的收尾定时器
+  // 被系统大幅延迟而跳过，这里补上，保证本次翻页飞行中露出的旧数字正确。
+  bottom.textContent = old;
+
+  // 落下的卡片显示旧数字，展开的卡片显示新数字
+  tf.querySelector(".num").textContent = old;
+  bf.querySelector(".num").textContent = newVal;
+  // 静态上半页从一开始就换成新数字：旧卡片下落过程中逐渐露出它，
+  // 与真实翻页钟一致；静态下半页保持旧数字，等新卡片翻下来盖住。
+  top.textContent = newVal;
 
   tf.classList.remove("animate");
   bf.classList.remove("animate");
   void tf.offsetWidth; // 强制回流以重新触发动画
   tf.classList.add("animate");
+  bf.classList.add("animate");
 
+  // 收尾只做画面完全相同的替换：静态下半页换成与展开卡片一致的新数字
+  // 后隐藏动画卡片。定时器早到晚到都不影响画面——这是消除卡顿的关键。
+  // 代际计数：若本次翻页还没收尾就开始了下一次翻页（定时器被系统延迟
+  // 300ms 以上时可能发生），过期收尾直接作废，避免掐断进行中的动画。
+  const gen = (el._flipGen = (el._flipGen || 0) + 1);
   setTimeout(function () {
-    top.textContent = newVal;
+    if (el._flipGen !== gen) return;
     bottom.textContent = newVal;
     tf.classList.remove("animate");
-    bf.classList.add("animate");
-    setTimeout(function () { bf.classList.remove("animate"); }, 320);
-  }, 320);
+    bf.classList.remove("animate");
+  }, 700);
 
   el.dataset.value = newVal;
 }
@@ -557,7 +580,17 @@ function tick() {
   const now = new Date();
   const str = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
   for (let i = 0; i < digits.length; i++) updateDigit(digits[i], str[i]);
-  dateEl.textContent = formatDate(now);
+  const dateStr = formatDate(now);
+  if (dateEl.textContent !== dateStr) dateEl.textContent = dateStr;
+}
+
+let tickTimer = null;
+
+function scheduleTick() {
+  // 对齐到真实秒边界再翻页（+20ms 余量确保读到的是新的一秒），
+  // 避免 setInterval 的累计漂移与后台节流导致的翻页错拍
+  const delay = 1020 - (Date.now() % 1000);
+  tickTimer = setTimeout(function () { tick(); scheduleTick(); }, delay);
 }
 
 function startClock() {
@@ -566,32 +599,78 @@ function startClock() {
   const str = pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds());
   for (let i = 0; i < digits.length; i++) setDigit(digits[i], str[i]);
   dateEl.textContent = formatDate(now);
-  setInterval(tick, 1000);
+  scheduleTick();
 }
+
+// 从后台切回前台时立即对时一次，消除节流期间积压的错拍
+document.addEventListener("visibilitychange", function () {
+  if (!document.hidden && tickTimer !== null) {
+    clearTimeout(tickTimer);
+    tick();
+    scheduleTick();
+  }
+});
 
 /* 全屏控制 */
 const overlay = document.getElementById("clockOverlay");
 const openBtn = document.getElementById("openClockBtn");
 const exitBtn = document.getElementById("exitBtn");
 
+function isFullscreen() {
+  return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function enterFullscreen(el) {
+  const fn = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!fn) return;
+  try {
+    const p = fn.call(el);
+    if (p && typeof p.catch === "function") {
+      p.catch(function () { /* 请求被拒绝时不进入真全屏，仍以铺满视口展示 */ });
+    }
+  } catch (e) { /* 老版 WebKit 同步抛错时同上 */ }
+}
+
+function exitFullscreen() {
+  const fn = document.exitFullscreen || document.webkitExitFullscreen;
+  if (fn) fn.call(document);
+}
+
+function closeOverlay() {
+  overlay.classList.remove("open");
+}
+
 openBtn.addEventListener("click", function () {
   overlay.classList.add("open");
-  if (overlay.requestFullscreen) {
-    overlay.requestFullscreen().catch(function () { /* 不支持全屏时仍以铺满视口展示 */ });
-  }
+  enterFullscreen(overlay);
 });
 
 exitBtn.addEventListener("click", function () {
-  if (document.fullscreenElement && document.exitFullscreen) {
-    document.exitFullscreen();
+  if (isFullscreen()) {
+    exitFullscreen();
   } else {
-    overlay.classList.remove("open");
+    closeOverlay();
   }
 });
 
-document.addEventListener("fullscreenchange", function () {
-  if (!document.fullscreenElement) overlay.classList.remove("open");
+document.addEventListener("keydown", function (e) {
+  // 真全屏下 Esc 通常由浏览器原生消费（此时不会派发 keydown，退出后走
+  // fullscreenchange 收尾）；若 keydown 到达页面，这里统一负责退出，
+  // 同时兜底处理未能进入真全屏（请求被拒/浏览器不支持）的情况。
+  if (e.key === "Escape" && overlay.classList.contains("open")) {
+    if (isFullscreen()) {
+      exitFullscreen();
+    } else {
+      closeOverlay();
+    }
+  }
 });
+
+function onFullscreenChange() {
+  if (!isFullscreen()) closeOverlay();
+}
+document.addEventListener("fullscreenchange", onFullscreenChange);
+document.addEventListener("webkitfullscreenchange", onFullscreenChange);
 
 /* 启动 */
 startClock();
