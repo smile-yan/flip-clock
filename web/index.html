@@ -183,30 +183,34 @@
   .clock-overlay { position: fixed; inset: 0; z-index: 1000; display: none; }
   .clock-overlay.open {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: #05070a;
-    color: #f2efe4;
+    background: #010101;
+    color: #eee;
   }
-  .clock-overlay:fullscreen { width: 100%; height: 100%; background: #05070a; }
+  .clock-overlay:fullscreen { width: 100%; height: 100%; background: #010101; }
 
   .clock-stage { text-align: center; user-select: none; }
 
   /* 与桌面端一致：时钟随屏幕等比放大铺满，而不是固定尺寸居中 */
-  .clock-date { font-size: clamp(15px, 2.6vmin, 34px); color: #9aa4b4; margin-bottom: clamp(10px, 3vmin, 30px); }
-  .clock-motto { margin-top: clamp(12px, 3.4vmin, 34px); font-size: clamp(13px, 2.4vmin, 30px); color: #c9b98f; }
+  .clock-date { font-size: clamp(15px, 2.6vmin, 34px); color: #eee; margin-bottom: clamp(10px, 3vmin, 30px); }
+  .clock-motto { margin-top: clamp(12px, 3.4vmin, 34px); font-size: clamp(13px, 2.4vmin, 30px); color: #eee; }
 
   .clock {
     --digit-w: min(12vw, 26vh);
     --digit-h: calc(var(--digit-w) * 1.36);
-    --card-face: linear-gradient(180deg, #1a2028 0%, #12161d 50%, #0d1117 100%);
-    --digit-text: #f2efe4;
+    /* 桌面端 flipclock.css：深色主题下卡片为纯色 #333、数字 #EEE */
+    --card-face: #333;
+    --digit-text: #eee;
     display: flex; align-items: center; justify-content: center;
-    gap: calc(var(--digit-w) * 0.07);
+    gap: calc(var(--digit-w) * 0.08);
   }
 
   .digit {
     position: relative; width: var(--digit-w); height: var(--digit-h);
-    /* 透视随卡片尺寸缩放，大屏小屏的翻转立体感一致 */
-    perspective: calc(var(--digit-h) * 2.6); border-radius: calc(var(--digit-w) * 0.09);
+    background: #000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+    /* 透视随卡片尺寸缩放，大屏小屏的翻转立体感一致
+       （桌面端为 200px/90px ≈ 卡高的 2.2 倍） */
+    perspective: calc(var(--digit-h) * 2.2); border-radius: calc(var(--digit-w) * 0.09);
   }
   .half {
     position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden;
@@ -218,29 +222,37 @@
   .num {
     position: absolute; left: 0; width: 100%; height: 200%;
     display: flex; align-items: center; justify-content: center;
-    font-family: "SF Mono", "Menlo", "Consolas", monospace;
-    font-size: calc(var(--digit-h) * 0.66);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: calc(var(--digit-h) * 0.95);
     font-weight: 700; color: var(--digit-text);
     background: var(--card-face);
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+    text-shadow: 0 1px 2px #000;
   }
   .half.top .num { top: 0; }
   .half.bottom .num { bottom: 0; }
 
-  /* hinge seam */
+  /* hinge seam —— 桌面端 flipclock.css：up 半页底部 3px 深色铰链线 */
   .half.top::after {
-    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
-    background: rgba(0, 0, 0, 0.65); z-index: 3;
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+    background: rgba(0, 0, 0, 0.4); z-index: 3;
   }
-  .digit::after {
-    content: ""; position: absolute; left: 6%; right: 6%; top: 50%; height: 1px;
-    background: rgba(255, 255, 255, 0.05); z-index: 4; transform: translateY(-0.5px); pointer-events: none;
+
+  /* 翻页过程的明暗阴影：与桌面端一致，随翻转渐入/渐出 */
+  .shadow {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    z-index: 2; opacity: 0; pointer-events: none;
   }
+  /* 朝铰链一侧渐黑：上半页(铰链在底部)自上往下渐黑，下半页相反 */
+  .half.top .shadow, .flip.top-flip .shadow { background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), #000); }
+  .half.bottom .shadow, .flip.bottom-flip .shadow { background: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.1)); }
+  @keyframes shadow-show { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes shadow-hide { from { opacity: 1; } to { opacity: 0; } }
 
   /* flip cards */
   .flip {
     position: absolute; left: 0; width: 100%; height: 50%; overflow: hidden;
     background: var(--card-face); visibility: hidden; backface-visibility: hidden; z-index: 5;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
     will-change: transform;
   }
   .flip.animate { visibility: visible; }
@@ -251,24 +263,31 @@
 
   /* 两段翻转由同一次 JS 触发、完全交给 CSS 时间线衔接（下半页用
      animation-delay），翻转过程中 JS 不再改内容/切类，主线程繁忙时
-     卡片也不会停在 90° 等定时器 */
-  .flip.top-flip.animate { animation: flip-top 0.32s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards; }
-  .flip.bottom-flip.animate { animation: flip-bottom 0.32s cubic-bezier(0.22, 0.61, 0.36, 1) 0.32s forwards; }
+     卡片也不会停在 90° 等定时器。时长/节奏与桌面端 flipclock.css
+     一致：上半页 0.5s 匀速折下，下半页延时 0.5s 再匀速展开，共 1s */
+  .flip.top-flip.animate { animation: flip-top 0.5s linear forwards; }
+  .flip.bottom-flip.animate { animation: flip-bottom 0.5s linear 0.5s forwards; }
   @keyframes flip-top { from { transform: rotateX(0deg); } to { transform: rotateX(-90deg); } }
   @keyframes flip-bottom { from { transform: rotateX(90deg); } to { transform: rotateX(0deg); } }
 
-  /* separator (colon) */
+  /* 阴影时间线（与桌面端 show/hide 动画对应）：
+     旧上半页折下时渐黑；被盖住的旧下半页渐黑；
+     新上半页铰链处由黑转亮；新下半页展开时由黑转亮 */
+  .flip.top-flip.animate .shadow { animation: shadow-show 0.5s linear both; }
+  .flip.bottom-flip.animate .shadow { animation: shadow-hide 0.5s 0.2s linear both; }
+  .half.top.animate .shadow { animation: shadow-hide 0.5s 0.3s linear both; }
+  .half.bottom.animate .shadow { animation: shadow-show 0.5s linear both; }
+
+  /* separator (colon) —— 与桌面端一致：#323434 圆点，不闪烁 */
   .separator {
-    height: var(--digit-h); width: calc(var(--digit-w) * 0.22);
+    height: var(--digit-h); width: calc(var(--digit-w) * 0.3);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: calc(var(--digit-h) * 0.30);
   }
   .separator .dot {
-    width: calc(var(--digit-w) * 0.10); height: calc(var(--digit-w) * 0.10);
-    border-radius: 50%; background: #f2efe4; opacity: 0.85;
-    animation: blink 1s steps(1) infinite;
+    width: calc(var(--digit-w) * 0.15); height: calc(var(--digit-w) * 0.15);
+    border-radius: 50%; background: #323434; box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
   }
-  @keyframes blink { 0%, 50% { opacity: 0.85; } 51%, 100% { opacity: 0.25; } }
 
   .exit-fullscreen {
     position: absolute; top: 18px; right: 18px;
@@ -514,10 +533,10 @@ function buildClock() {
     d.className = "digit";
     d.dataset.value = "";
     d.innerHTML =
-      '<div class="half top"><span class="num"></span></div>' +
-      '<div class="half bottom"><span class="num"></span></div>' +
-      '<div class="flip top-flip"><span class="num"></span></div>' +
-      '<div class="flip bottom-flip"><span class="num"></span></div>';
+      '<div class="half top"><span class="num"></span><span class="shadow"></span></div>' +
+      '<div class="half bottom"><span class="num"></span><span class="shadow"></span></div>' +
+      '<div class="flip top-flip"><span class="num"></span><span class="shadow"></span></div>' +
+      '<div class="flip bottom-flip"><span class="num"></span><span class="shadow"></span></div>';
     clockEl.appendChild(d);
     digits.push(d);
   }
@@ -534,6 +553,8 @@ function updateDigit(el, newVal) {
   if (old === newVal) return;
   const top = el.querySelector(".half.top .num");
   const bottom = el.querySelector(".half.bottom .num");
+  const ht = el.querySelector(".half.top");
+  const hb = el.querySelector(".half.bottom");
   const tf = el.querySelector(".flip.top-flip");
   const bf = el.querySelector(".flip.bottom-flip");
 
@@ -548,23 +569,32 @@ function updateDigit(el, newVal) {
   // 与真实翻页钟一致；静态下半页保持旧数字，等新卡片翻下来盖住。
   top.textContent = newVal;
 
+  // 翻转卡片与两个静态半页的阴影动画一起触发，时间线完全交给 CSS
+  ht.classList.remove("animate");
+  hb.classList.remove("animate");
   tf.classList.remove("animate");
   bf.classList.remove("animate");
   void tf.offsetWidth; // 强制回流以重新触发动画
+  ht.classList.add("animate");
+  hb.classList.add("animate");
   tf.classList.add("animate");
   bf.classList.add("animate");
 
   // 收尾只做画面完全相同的替换：静态下半页换成与展开卡片一致的新数字
   // 后隐藏动画卡片。定时器早到晚到都不影响画面——这是消除卡顿的关键。
-  // 代际计数：若本次翻页还没收尾就开始了下一次翻页（定时器被系统延迟
-  // 300ms 以上时可能发生），过期收尾直接作废，避免掐断进行中的动画。
+  // 代际计数：若本次翻页还没收尾就开始了下一次翻页（一秒一格的秒位上
+  // 收尾与下一次翻页天然同刻竞争，定时器被系统延迟时也可能发生），
+  // 过期收尾直接作废，避免掐断进行中的动画；作废也不会留下错误画面，
+  // 因为下一次翻页开始时会重新同步静态半页的内容。
   const gen = (el._flipGen = (el._flipGen || 0) + 1);
   setTimeout(function () {
     if (el._flipGen !== gen) return;
     bottom.textContent = newVal;
+    ht.classList.remove("animate");
+    hb.classList.remove("animate");
     tf.classList.remove("animate");
     bf.classList.remove("animate");
-  }, 700);
+  }, 1000);
 
   el.dataset.value = newVal;
 }
