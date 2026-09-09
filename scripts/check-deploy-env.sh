@@ -124,4 +124,41 @@ if ! run_remote "$DEST" "mkdir -p '$WEB_DEPLOY_PATH'" >/dev/null 2>&1; then
   exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# Step 5 — scp transfer test.
+# ---------------------------------------------------------------------------
+# The deploy step pushes the landing page with scp, whose option set differs
+# from ssh's (e.g. -P vs -p for the port), so a green ssh login alone does not
+# guarantee the scp command line is valid. Exercise the same code path with a
+# throwaway file and clean it up afterwards.
+
+PROBE_LOCAL="$(mktemp)"
+PROBE_REMOTE=".deploy-preflight-$REMOTE_ECHO"
+printf 'preflight %s\n' "$DEST:$PORT" > "$PROBE_LOCAL"
+
+run_scp() {
+  if [[ -n "${SSH_PASSWORD:-}" ]]; then
+    # shellcheck disable=SC2034
+    local SSHPASS
+    SSHPASS="$SSH_PASSWORD" sshpass -e scp "${SSH_OPTS[@]}" "$1" "$2"
+  else
+    scp "${SSH_OPTS[@]}" "$1" "$2"
+  fi
+}
+
+SCP_OK=0
+if run_scp "$PROBE_LOCAL" "$DEST:$WEB_DEPLOY_PATH/$PROBE_REMOTE" >/dev/null 2>&1; then
+  if run_remote "$DEST" "test -f '$WEB_DEPLOY_PATH/$PROBE_REMOTE'" >/dev/null 2>&1; then
+    SCP_OK=1
+  fi
+fi
+run_remote "$DEST" "rm -f '$WEB_DEPLOY_PATH/$PROBE_REMOTE'" >/dev/null 2>&1 || true
+rm -f "$PROBE_LOCAL"
+
+if [[ "$SCP_OK" -ne 1 ]]; then
+  echo "::error::scp transfer to '$WEB_DEPLOY_PATH' on $DEST failed." >&2
+  echo "::error::The deploy step uses scp with these exact options; check that they are valid for scp (not just ssh)." >&2
+  exit 1
+fi
+
 echo "==> OK: Deployment environment is ready ($DEST, port $PORT)." >&2

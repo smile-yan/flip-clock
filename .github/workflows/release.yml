@@ -429,7 +429,9 @@ jobs:
           PORT="${SSH_PORT:-22}"
           TARGET_DIR="${WEB_DEPLOY_PATH:?请配置变量: WEB_DEPLOY_PATH（部署目标目录，例如 /var/www/flip-clock）}"
 
-          SSH_OPTS=(-p "$PORT" -o StrictHostKeyChecking=accept-new)
+          # Port via -o (not -p): lowercase -p means "preserve times" in scp,
+          # not "port" — it would swallow the port number as a source file.
+          SSH_OPTS=(-o "Port=$PORT" -o StrictHostKeyChecking=accept-new)
 
           if [ -n "${SSH_PRIVATE_KEY:-}" ]; then
             KEY_FILE="$(mktemp)"
