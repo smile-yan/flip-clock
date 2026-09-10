@@ -27,6 +27,9 @@ pub struct Config {
     pub show_lunar: bool,
     #[serde(rename = "showMotto")]
     pub show_motto: bool,
+    // 旧版本配置文件里没有该字段，default 允许缺失时按关闭处理
+    #[serde(rename = "showFireflies", default)]
+    pub show_fireflies: bool,
     pub color: String,
 }
 
@@ -46,6 +49,7 @@ impl Default for Config {
             show_seconds: true,
             show_lunar: false,
             show_motto: true,
+            show_fireflies: false,
             color: "".to_string(),
         }
     }

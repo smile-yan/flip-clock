@@ -37,6 +37,10 @@ fn get_config() -> Result<HashMap<String, serde_json::Value>, String> {
     );
     map.insert("showLunar".to_string(), serde_json::json!(cfg.show_lunar));
     map.insert("showMotto".to_string(), serde_json::json!(cfg.show_motto));
+    map.insert(
+        "showFireflies".to_string(),
+        serde_json::json!(cfg.show_fireflies),
+    );
     map.insert("color".to_string(), serde_json::json!(cfg.color));
 
     Ok(map)
@@ -106,6 +110,12 @@ fn save_settings(payload: HashMap<String, serde_json::Value>) -> Result<(), Stri
     if let Some(v) = payload.get("showMotto") {
         if let Some(b) = v.as_bool() {
             cfg.show_motto = b;
+        }
+    }
+
+    if let Some(v) = payload.get("showFireflies") {
+        if let Some(b) = v.as_bool() {
+            cfg.show_fireflies = b;
         }
     }
 

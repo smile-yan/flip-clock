@@ -155,6 +155,9 @@ body {
     transform: scale(var(--zoom-level, 1));
     transform-origin: center center;
     transition: transform 0.2s ease-out;
+    /* 位于萤火虫画布之上（见文件末尾 .fireflies-canvas） */
+    position: relative;
+    z-index: 1;
 }
 
 .date-bar {
@@ -869,4 +872,14 @@ body {
 
 .btn-success:hover {
     background-color: #2db24e;
+}
+
+/* === 萤火虫背景 === */
+/* 萤火虫画布铺满窗口、置于时钟内容之下，不拦截任何鼠标事件 */
+.fireflies-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
 }

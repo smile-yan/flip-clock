@@ -10,6 +10,7 @@
         <script src="js/jquery.min.js"></script>
         <script src="js/flipclock.min.js"></script>
         <script src="js/update.js"></script>
+        <script src="js/fireflies.js"></script>
     </head>
     <body>
         <div class="container">
@@ -136,6 +137,11 @@
                         <span class="check-box"></span>
                         <span class="check-text">座右铭</span>
                     </label>
+                    <label class="check-line">
+                        <input type="checkbox" id="showFirefliesCheck">
+                        <span class="check-box"></span>
+                        <span class="check-text">萤火虫</span>
+                    </label>
                 </div>
             </section>
 
@@ -161,6 +167,7 @@
                 show_seconds: true,
                 show_lunar: false,
                 show_motto: true,
+                show_fireflies: false,
                 color: ''
             }
 
@@ -231,6 +238,7 @@
                 setCheckbox('showDateCheck', currentConfig.show_date)
                 setCheckbox('showLunarCheck', currentConfig.show_lunar)
                 setCheckbox('showMottoCheck', currentConfig.show_motto)
+                setCheckbox('showFirefliesCheck', currentConfig.show_fireflies)
                 setText('mottoInput', currentConfig.motto)
 
                 overlay.classList.add('visible')
@@ -257,10 +265,65 @@
                 persistConfig(immediate)
             }
 
+            // 配置字段命名映射：前端内部统一用 snake_case，
+            // Tauri 后端（config.rs）的 serde 用 camelCase，存取时需转换。
+            const TAURI_KEY_MAP = {
+                motto: 'motto',
+                show_in_dock: 'showInDock',
+                theme: 'theme',
+                style: 'style',
+                time_format: 'timeFormat',
+                show_date: 'showDate',
+                show_seconds: 'showSeconds',
+                show_lunar: 'showLunar',
+                show_motto: 'showMotto',
+                show_fireflies: 'showFireflies'
+            }
+
+            function toTauriConfig(cfg) {
+                const out = {}
+                Object.keys(TAURI_KEY_MAP).forEach(function (k) {
+                    if (cfg && cfg[k] !== undefined && cfg[k] !== null) {
+                        out[TAURI_KEY_MAP[k]] = cfg[k]
+                    }
+                })
+                return out
+            }
+
+            function fromTauriConfig(raw) {
+                const out = {}
+                Object.keys(TAURI_KEY_MAP).forEach(function (k) {
+                    const v = raw ? raw[TAURI_KEY_MAP[k]] : undefined
+                    if (v !== undefined && v !== null) out[k] = v
+                })
+                return out
+            }
+
+            function tauriInvoke() {
+                if (window.__TAURI__ && window.__TAURI__.core &&
+                    typeof window.__TAURI__.core.invoke === 'function') {
+                    return window.__TAURI__.core.invoke
+                }
+                return null
+            }
+
             function persistConfig(immediate) {
                 console.log('[frontend] persistConfig called, immediate=' + immediate)
+                const invoke = tauriInvoke()
+                if (invoke) {
+                    const payload = toTauriConfig(collectPayload())
+                    console.log('[frontend] calling save_settings with payload:', payload)
+                    invoke('save_settings', { payload: payload })
+                        .then(function (result) {
+                            console.log('[frontend] save_settings resolved:', result)
+                        })
+                        .catch(function (err) {
+                            console.error('[frontend] 保存设置失败:', err)
+                        })
+                    return
+                }
                 if (!window.wails || !window.wails.CallByName) {
-                    console.warn('[frontend] window.wails.CallByName not available')
+                    console.warn('[frontend] no tauri invoke and window.wails.CallByName not available')
                     return
                 }
                 const payload = collectPayload()
@@ -286,7 +349,8 @@
                     show_date: document.getElementById('showDateCheck').checked,
                     show_seconds: style === 'with-seconds',
                     show_lunar: document.getElementById('showLunarCheck').checked,
-                    show_motto: document.getElementById('showMottoCheck').checked
+                    show_motto: document.getElementById('showMottoCheck').checked,
+                    show_fireflies: document.getElementById('showFirefliesCheck').checked
                 }
             }
 
@@ -322,6 +386,10 @@
                     } else {
                         mottoEl.style.display = 'none'
                     }
+                }
+                // 萤火虫开关跟随配置（默认关闭，见 DEFAULT_CONFIG.show_fireflies）
+                if (window.Fireflies) {
+                    window.Fireflies.setEnabled(!!currentConfig.show_fireflies)
                 }
             }
 
@@ -464,13 +532,14 @@
                 })
 
                 // 显示复选框
-                ;['showDateCheck', 'showLunarCheck', 'showMottoCheck'].forEach(function (id) {
+                ;['showDateCheck', 'showLunarCheck', 'showMottoCheck', 'showFirefliesCheck'].forEach(function (id) {
                     const el = document.getElementById(id)
                     el.addEventListener('change', function () {
                         const map = {
                             showDateCheck: 'show_date',
                             showLunarCheck: 'show_lunar',
-                            showMottoCheck: 'show_motto'
+                            showMottoCheck: 'show_motto',
+                            showFirefliesCheck: 'show_fireflies'
                         }
                         currentConfig[map[id]] = this.checked
                         applyDisplays()
@@ -490,36 +559,52 @@
                 })
             }
 
+            // 读取到的持久化配置统一在这里落地：
+            // 先用样式归一化 show_seconds，确保 needRebuild 判断基于一致的状态；
+            // 主题、显示开关等是覆盖式更新；time_format/style 变了才重建。
+            function handleLoadedConfig(cfg) {
+                console.log('[frontend] config loaded:', cfg)
+                const normalizedCfg = Object.assign({}, DEFAULT_CONFIG, cfg || {})
+                if (normalizedCfg.style === 'with-seconds') {
+                    normalizedCfg.show_seconds = true
+                } else if (normalizedCfg.style === 'without-seconds') {
+                    normalizedCfg.show_seconds = false
+                }
+                const needRebuild =
+                    normalizedCfg.time_format !== currentConfig.time_format ||
+                    normalizedCfg.style !== currentConfig.style ||
+                    !!normalizedCfg.show_seconds !== !!currentConfig.show_seconds
+                currentConfig = normalizedCfg
+                applyTheme(currentConfig.theme)
+                applyDisplays()
+                if (needRebuild) buildClock()
+            }
+
             function applyPersistedConfig() {
                 // 先用默认配置同步初始化一次 FlipClock，避免空白。
                 applyConfig(DEFAULT_CONFIG)
+                const invoke = tauriInvoke()
+                if (invoke) {
+                    invoke('get_config')
+                        .then(function (raw) {
+                            handleLoadedConfig(fromTauriConfig(raw))
+                        })
+                        .catch(function (err) {
+                            console.error('读取配置失败:', err)
+                        })
+                    return
+                }
                 if (!window.wails || !window.wails.CallByName) {
-                    console.warn('[frontend] window.wails.CallByName not available')
+                    console.warn('[frontend] no tauri invoke and window.wails.CallByName not available')
                     return
                 }
                 console.log('[frontend] calling GetConfig...')
                 window.wails.CallByName('main.App.GetConfig')
                     .then(function (cfg) {
-                        console.log('[frontend] GetConfig returned:', cfg)
-                    // 先用样式归一化 show_seconds，确保 needRebuild 判断基于一致的状态
-                    const normalizedCfg = Object.assign({}, DEFAULT_CONFIG, cfg || {})
-                    if (normalizedCfg.style === 'with-seconds') {
-                        normalizedCfg.show_seconds = true
-                    } else if (normalizedCfg.style === 'without-seconds') {
-                        normalizedCfg.show_seconds = false
-                    }
-                    // 主题、显示开关等是覆盖式更新；time_format/style 变了才重建。
-                    const needRebuild =
-                        normalizedCfg.time_format !== currentConfig.time_format ||
-                        normalizedCfg.style !== currentConfig.style ||
-                        !!normalizedCfg.show_seconds !== !!currentConfig.show_seconds
-                    currentConfig = normalizedCfg
-                    applyTheme(currentConfig.theme)
-                    applyDisplays()
-                    if (needRebuild) buildClock()
-                }).catch(function (err) {
-                    console.error('读取配置失败:', err)
-                })
+                        handleLoadedConfig(cfg)
+                    }).catch(function (err) {
+                        console.error('读取配置失败:', err)
+                    })
             }
 
             function bindMenuEvents() {
