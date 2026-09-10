@@ -77,6 +77,9 @@ jobs:
           toolchain: ${{ env.RUST_TOOLCHAIN }}
           targets: ${{ matrix.arch }}
 
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
         run: |
@@ -89,8 +92,11 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev
 
+      # Use the npm-distributed Tauri CLI (prebuilt binary) instead of
+      # `cargo install tauri-cli`, which compiles the whole CLI from source
+      # on every run.
       - name: Install Tauri CLI
-        run: cargo install tauri-cli
+        run: npm install --no-save @tauri-apps/cli@2
 
       # Verify the committed icon.ico has matching header width/height on every
       # layer — guards against the regression where a 512-px PNG payload was
@@ -139,7 +145,7 @@ jobs:
       - name: Build
         run: |
           cd src-tauri
-          cargo tauri build --target ${{ matrix.arch }}
+          npx tauri build --target ${{ matrix.arch }}
 
       - name: Stage raw binary for npm packaging
         shell: bash
