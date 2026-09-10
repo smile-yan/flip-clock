@@ -4,7 +4,10 @@
 mod config;
 mod menu;
 
-use config::{available_styles, available_themes, available_time_formats, load, save};
+use config::{
+    available_styles, available_themes, available_time_formats, clamp_firefly_level, load, save,
+    DEFAULT_FIREFLY_COUNT, DEFAULT_FIREFLY_SPEED,
+};
 use menu::create_app_menu;
 use std::collections::HashMap;
 use tauri::{menu::MenuEvent, Emitter, Manager, Runtime};
@@ -40,6 +43,14 @@ fn get_config() -> Result<HashMap<String, serde_json::Value>, String> {
     map.insert(
         "showFireflies".to_string(),
         serde_json::json!(cfg.show_fireflies),
+    );
+    map.insert(
+        "fireflyCount".to_string(),
+        serde_json::json!(cfg.firefly_count),
+    );
+    map.insert(
+        "fireflySpeed".to_string(),
+        serde_json::json!(cfg.firefly_speed),
     );
     map.insert("color".to_string(), serde_json::json!(cfg.color));
 
@@ -116,6 +127,18 @@ fn save_settings(payload: HashMap<String, serde_json::Value>) -> Result<(), Stri
     if let Some(v) = payload.get("showFireflies") {
         if let Some(b) = v.as_bool() {
             cfg.show_fireflies = b;
+        }
+    }
+
+    if let Some(v) = payload.get("fireflyCount") {
+        if let Some(n) = v.as_i64() {
+            cfg.firefly_count = clamp_firefly_level(n as i32, DEFAULT_FIREFLY_COUNT);
+        }
+    }
+
+    if let Some(v) = payload.get("fireflySpeed") {
+        if let Some(n) = v.as_i64() {
+            cfg.firefly_speed = clamp_firefly_level(n as i32, DEFAULT_FIREFLY_SPEED);
         }
     }
 

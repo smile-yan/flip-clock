@@ -30,7 +30,20 @@ pub struct Config {
     // 旧版本配置文件里没有该字段，default 允许缺失时按关闭处理
     #[serde(rename = "showFireflies", default)]
     pub show_fireflies: bool,
+    // 萤火虫数量 / 速度档位（1..=3，3 为最多/最快），旧配置缺失时取默认档
+    #[serde(rename = "fireflyCount", default = "default_firefly_count")]
+    pub firefly_count: i32,
+    #[serde(rename = "fireflySpeed", default = "default_firefly_speed")]
+    pub firefly_speed: i32,
     pub color: String,
+}
+
+fn default_firefly_count() -> i32 {
+    DEFAULT_FIREFLY_COUNT
+}
+
+fn default_firefly_speed() -> i32 {
+    DEFAULT_FIREFLY_SPEED
 }
 
 impl Default for Config {
@@ -50,6 +63,8 @@ impl Default for Config {
             show_lunar: false,
             show_motto: true,
             show_fireflies: false,
+            firefly_count: DEFAULT_FIREFLY_COUNT,
+            firefly_speed: DEFAULT_FIREFLY_SPEED,
             color: "".to_string(),
         }
     }
@@ -58,6 +73,21 @@ impl Default for Config {
 pub const DEFAULT_THEME: &str = "dark";
 pub const DEFAULT_STYLE: &str = "with-seconds";
 pub const DEFAULT_TIME_FORMAT: &str = "24h";
+
+// 萤火虫档位：1 少/慢，2 适中，3 多/快（默认，等同旧版表现）
+pub const MIN_FIREFLY_LEVEL: i32 = 1;
+pub const MAX_FIREFLY_LEVEL: i32 = 3;
+pub const DEFAULT_FIREFLY_COUNT: i32 = 3;
+pub const DEFAULT_FIREFLY_SPEED: i32 = 3;
+
+/// 档位只认 1..=3，越界（含旧配置的 0 和手改的脏值）一律退回 fallback
+pub fn clamp_firefly_level(level: i32, fallback: i32) -> i32 {
+    if (MIN_FIREFLY_LEVEL..=MAX_FIREFLY_LEVEL).contains(&level) {
+        level
+    } else {
+        fallback
+    }
+}
 
 pub fn available_themes() -> Vec<&'static str> {
     vec![
@@ -106,6 +136,9 @@ pub fn load() -> Result<Config, String> {
     if cfg.time_format.is_empty() {
         cfg.time_format = DEFAULT_TIME_FORMAT.to_string();
     }
+    // 档位可能来自旧配置（无字段）或手改的 config.json，统一收敛到 1..=3
+    cfg.firefly_count = clamp_firefly_level(cfg.firefly_count, DEFAULT_FIREFLY_COUNT);
+    cfg.firefly_speed = clamp_firefly_level(cfg.firefly_speed, DEFAULT_FIREFLY_SPEED);
 
     log::info!(
         "Loaded config: motto={} theme={} style={} time_format={}",
@@ -134,4 +167,47 @@ pub fn save(cfg: &Config) -> Result<(), String> {
     log::info!("Config saved to {:?}", config_path);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 前端 TAURI_KEY_MAP 用 camelCase 与后端对话，字段名一旦漂移就会静默丢配置
+    #[test]
+    fn levels_round_trip_as_camel_case() {
+        let cfg = Config {
+            firefly_count: 1,
+            firefly_speed: 2,
+            ..Config::default()
+        };
+        let json = serde_json::to_string(&cfg).unwrap();
+        assert!(json.contains("\"fireflyCount\":1"), "{}", json);
+        assert!(json.contains("\"fireflySpeed\":2"), "{}", json);
+
+        let back: Config = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.firefly_count, 1);
+        assert_eq!(back.firefly_speed, 2);
+    }
+
+    // 升级上来的老配置没有这两个字段，必须按默认档（3）读出来
+    #[test]
+    fn old_config_without_firefly_levels_uses_defaults() {
+        let old = r#"{"motto":"hi","width":600,"height":300,"x":-1,"y":-1,
+            "showInDock":false,"theme":"dark","style":"with-seconds",
+            "timeFormat":"24h","showDate":true,"showSeconds":true,
+            "showLunar":false,"showMotto":true,"showFireflies":true,"color":""}"#;
+        let cfg: Config = serde_json::from_str(old).unwrap();
+        assert_eq!(cfg.firefly_count, DEFAULT_FIREFLY_COUNT);
+        assert_eq!(cfg.firefly_speed, DEFAULT_FIREFLY_SPEED);
+    }
+
+    // 手改过 config.json 或旧值越界时收敛到默认档，不能让画面挂掉
+    #[test]
+    fn out_of_range_levels_fall_back() {
+        assert_eq!(clamp_firefly_level(0, DEFAULT_FIREFLY_COUNT), 3);
+        assert_eq!(clamp_firefly_level(9, DEFAULT_FIREFLY_COUNT), 3);
+        assert_eq!(clamp_firefly_level(-1, DEFAULT_FIREFLY_SPEED), 3);
+        assert_eq!(clamp_firefly_level(2, DEFAULT_FIREFLY_SPEED), 2);
+    }
 }

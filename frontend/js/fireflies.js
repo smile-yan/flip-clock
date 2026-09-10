@@ -6,6 +6,8 @@
  *     转向由多组正弦叠加的平滑噪声驱动，轨迹自然蜿蜒；
  *   - 亮度按各自周期闪烁，大部分时间是微弱余晖，周期性亮起；
  *   - 默认不开启，由设置里的「萤火虫」开关通过 window.Fireflies.setEnabled 控制；
+ *   - 数量与速度各 3 个档位，由 window.Fireflies.setCount / setSpeed 控制，
+ *     默认第 3 档，密度和速度与旧版一致；
  *   - 浅色主题（light/sepia）下自动停用——就像白天看不到萤火虫；
  *   - prefers-reduced-motion 时完全不启动；
  *   - 页面隐藏时暂停渲染，避免空转耗电。
@@ -15,6 +17,14 @@
 
     var MIN_FIREFLIES = 8;
     var MAX_FIREFLIES = 24;
+
+    // 数量档位：以「按窗口面积算出的基准数量」为第 3 档，低档位按比例减少，
+    // 所以调档只是同一个画面疏密的变化，不会影响每只萤火虫的行为。
+    var COUNT_SCALE = [0, 0.35, 0.6, 1];
+    // 速度档位：位移、转向、状态切换时长一起缩放，低档位等于「同一支舞跳得慢」，
+    // 轨迹形状保持不变。闪烁周期不参与缩放，否则慢了之后会像熄火。
+    var SPEED_SCALE = [0, 0.4, 0.65, 1];
+    var DEFAULT_LEVEL = 3;
 
     // 萤火虫体色（黄绿 → 暖黄，参考真实萤火虫的生物光）
     var COLORS = [
@@ -74,17 +84,19 @@
             this.retargetAt = 0;                              // 首帧即切换一次状态
         }
 
-        Firefly.prototype.update = function (dt, now) {
-            // 状态切换：多数时间缓慢滑翔，偶尔急速冲刺一段
+        // s 为当前速度档位的缩放系数，见 SPEED_SCALE
+        Firefly.prototype.update = function (dt, now, s) {
+            // 状态切换：多数时间缓慢滑翔，偶尔急速冲刺一段。
+            // 时长同样按 s 缩放，低档位下「做决定」也更慢，轨迹才跟高档位一致。
             if (now >= this.retargetAt) {
                 if (Math.random() < 0.28) {
                     this.targetSpeed = 150 + Math.random() * 150;
-                    this.retargetAt = now + 400 + Math.random() * 800;
+                    this.retargetAt = now + (400 + Math.random() * 800) / s;
                     // 冲刺前换个方向
                     this.heading += (Math.random() - 0.5) * 2.2;
                 } else {
                     this.targetSpeed = 8 + Math.random() * 26;
-                    this.retargetAt = now + 1200 + Math.random() * 2800;
+                    this.retargetAt = now + (1200 + Math.random() * 2800) / s;
                 }
             }
 
@@ -97,10 +109,10 @@
 
             // 转向：慢速时蜿蜒游走，冲刺时轨迹更直
             var wander = this.speed > 90 ? 0.6 : 1.5;
-            this.heading += this.wobble(now / 1000) * wander * dt;
+            this.heading += this.wobble(now * s / 1000) * wander * dt * s;
 
-            this.x += Math.cos(this.heading) * this.speed * dt;
-            this.y += Math.sin(this.heading) * this.speed * dt;
+            this.x += Math.cos(this.heading) * this.speed * s * dt;
+            this.y += Math.sin(this.heading) * this.speed * s * dt;
 
             // 越界环绕：飞出一边，再从另一边飞入
             var m = 40;
@@ -128,12 +140,12 @@
                 Math.max(0, Math.min(1, a)).toFixed(3) + ')';
         }
 
-        function drawFly(f, b) {
+        function drawFly(f, b, s) {
             var r = f.rgb;
 
-            // 冲刺轨迹：沿飞行方向的微弱光痕
+            // 冲刺轨迹：沿飞行方向的微弱光痕（长度按实际速度给，低档位光痕更短）
             if (f.speed > 90) {
-                var len = Math.min(f.speed * 0.07, 20);
+                var len = Math.min(f.speed * s * 0.07, 20);
                 ctx.strokeStyle = rgba(r, 0.12 * b);
                 ctx.lineWidth = f.size * 1.1;
                 ctx.lineCap = 'round';
@@ -162,8 +174,9 @@
         }
 
         function syncCount() {
-            var want = Math.max(MIN_FIREFLIES,
+            var base = Math.max(MIN_FIREFLIES,
                 Math.min(MAX_FIREFLIES, Math.round(W * H / 40000)));
+            var want = Math.max(1, Math.round(base * COUNT_SCALE[countLevel]));
             while (flies.length < want) flies.push(new Firefly());
             flies.length = Math.min(flies.length, want);
         }
@@ -189,13 +202,14 @@
             var dt = Math.min((now - last) / 1000, 0.05) || 0.016;
             last = now;
 
+            var s = SPEED_SCALE[speedLevel];
             ctx.clearRect(0, 0, W, H);
             // 加色混合，让光点叠加在深色背景上更像真实发光
             ctx.globalCompositeOperation = 'lighter';
             for (var i = 0; i < flies.length; i++) {
                 var f = flies[i];
-                f.update(dt, now);
-                drawFly(f, f.brightness(now));
+                f.update(dt, now, s);
+                drawFly(f, f.brightness(now), s);
             }
             ctx.globalCompositeOperation = 'source-over';
         }
@@ -211,12 +225,22 @@
             stop: function () {
                 running = false;
                 ctx.clearRect(0, 0, W, H);
-            }
+            },
+            // 数量档位变化：按新档位增删萤火虫，已在飞的不受影响
+            syncCount: syncCount
         };
     }
 
     var engine = null;
     var userEnabled = false;
+    var countLevel = DEFAULT_LEVEL;
+    var speedLevel = DEFAULT_LEVEL;
+
+    // 档位来自设置界面 / 后端配置，这里兜一次底，避免非法值把画面搞坏
+    function normalizeLevel(level) {
+        var n = Math.round(Number(level));
+        return (n >= 1 && n <= 3) ? n : DEFAULT_LEVEL;
+    }
 
     // 唯一的启停决策点：开关、主题、页面可见性三者共同决定是否运行
     function sync() {
@@ -234,7 +258,11 @@
         if (window.matchMedia &&
             window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             // 尊重系统「减弱动态效果」设置：永远不启动
-            window.Fireflies = { setEnabled: function () {} };
+            window.Fireflies = {
+                setEnabled: function () {},
+                setCount: function () {},
+                setSpeed: function () {}
+            };
             return;
         }
 
@@ -242,6 +270,14 @@
             setEnabled: function (on) {
                 userEnabled = !!on;
                 sync();
+            },
+            // 档位记忆在模块里，引擎尚未创建时也先存下来，等开启时自然生效
+            setCount: function (level) {
+                countLevel = normalizeLevel(level);
+                if (engine) engine.syncCount();
+            },
+            setSpeed: function (level) {
+                speedLevel = normalizeLevel(level);
             }
         };
 

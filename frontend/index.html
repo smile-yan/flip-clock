@@ -145,6 +145,33 @@
                 </div>
             </section>
 
+            <!-- 萤火虫密度与速度（仅在开启萤火虫时出现） -->
+            <section class="settings-section firefly-section" id="fireflySection">
+                <span class="section-label">萤火虫：</span>
+                <div class="firefly-options">
+                    <div class="firefly-field">
+                        <span class="firefly-field-label">数量</span>
+                        <div class="select-wrapper">
+                            <select id="fireflyCountSelect" class="settings-select">
+                                <option value="1">少</option>
+                                <option value="2">适中</option>
+                                <option value="3">多</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="firefly-field">
+                        <span class="firefly-field-label">速度</span>
+                        <div class="select-wrapper">
+                            <select id="fireflySpeedSelect" class="settings-select">
+                                <option value="1">慢</option>
+                                <option value="2">适中</option>
+                                <option value="3">快</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- 座右铭输入 -->
             <section class="settings-section motto-input-section">
                 <input type="text" id="mottoInput" class="settings-text-input" maxlength="200"
@@ -168,6 +195,8 @@
                 show_lunar: false,
                 show_motto: true,
                 show_fireflies: false,
+                firefly_count: 3,
+                firefly_speed: 3,
                 color: ''
             }
 
@@ -197,6 +226,12 @@
             function setText(id, value) {
                 const el = document.getElementById(id)
                 if (el) el.value = value == null ? '' : value
+            }
+
+            // 萤火虫档位只有 1/2/3 三档，配置里读到脏数据时退回默认档（第 3 档）
+            function fireflyLevel(value, fallback) {
+                const n = Math.round(Number(value))
+                return (n >= 1 && n <= 3) ? n : fallback
             }
 
             // === 关于弹窗控制 ===
@@ -239,10 +274,15 @@
                 setCheckbox('showLunarCheck', currentConfig.show_lunar)
                 setCheckbox('showMottoCheck', currentConfig.show_motto)
                 setCheckbox('showFirefliesCheck', currentConfig.show_fireflies)
+                setSelect('fireflyCountSelect', String(fireflyLevel(currentConfig.firefly_count, DEFAULT_CONFIG.firefly_count)))
+                setSelect('fireflySpeedSelect', String(fireflyLevel(currentConfig.firefly_speed, DEFAULT_CONFIG.firefly_speed)))
                 setText('mottoInput', currentConfig.motto)
+                syncFireflySection()
 
                 overlay.classList.add('visible')
                 modal.classList.add('visible')
+                // 面板可滚动，重新打开时回到顶部，否则会停在上一轮的滚动位置
+                modal.scrollTop = 0
             }
 
             function closeSettings() {
@@ -277,7 +317,9 @@
                 show_seconds: 'showSeconds',
                 show_lunar: 'showLunar',
                 show_motto: 'showMotto',
-                show_fireflies: 'showFireflies'
+                show_fireflies: 'showFireflies',
+                firefly_count: 'fireflyCount',
+                firefly_speed: 'fireflySpeed'
             }
 
             function toTauriConfig(cfg) {
@@ -350,7 +392,9 @@
                     show_seconds: style === 'with-seconds',
                     show_lunar: document.getElementById('showLunarCheck').checked,
                     show_motto: document.getElementById('showMottoCheck').checked,
-                    show_fireflies: document.getElementById('showFirefliesCheck').checked
+                    show_fireflies: document.getElementById('showFirefliesCheck').checked,
+                    firefly_count: fireflyLevel(document.getElementById('fireflyCountSelect').value, DEFAULT_CONFIG.firefly_count),
+                    firefly_speed: fireflyLevel(document.getElementById('fireflySpeedSelect').value, DEFAULT_CONFIG.firefly_speed)
                 }
             }
 
@@ -387,10 +431,24 @@
                         mottoEl.style.display = 'none'
                     }
                 }
-                // 萤火虫开关跟随配置（默认关闭，见 DEFAULT_CONFIG.show_fireflies）
+                // 萤火虫开关与档位跟随配置（默认关闭，见 DEFAULT_CONFIG.show_fireflies）
                 if (window.Fireflies) {
                     window.Fireflies.setEnabled(!!currentConfig.show_fireflies)
+                    window.Fireflies.setCount(fireflyLevel(currentConfig.firefly_count, DEFAULT_CONFIG.firefly_count))
+                    window.Fireflies.setSpeed(fireflyLevel(currentConfig.firefly_speed, DEFAULT_CONFIG.firefly_speed))
                 }
+                syncFireflySection()
+            }
+
+            // 数量与速度只在萤火虫开着时才有意义，没开时把这一节收起来
+            function syncFireflySection() {
+                const section = document.getElementById('fireflySection')
+                if (!section) return
+                const wasVisible = section.classList.contains('visible')
+                const visible = !!currentConfig.show_fireflies
+                section.classList.toggle('visible', visible)
+                // 窗口只有半屏高时这一节会落在折叠线以下，刚展开时滚过去让它可见
+                if (visible && !wasVisible) section.scrollIntoView({ block: 'nearest' })
             }
 
             function applyTheme(theme) {
@@ -545,6 +603,18 @@
                         applyDisplays()
                         scheduleSave()
                     })
+                })
+
+                // 萤火虫数量 / 速度档位
+                document.getElementById('fireflyCountSelect').addEventListener('change', function () {
+                    currentConfig.firefly_count = fireflyLevel(this.value, DEFAULT_CONFIG.firefly_count)
+                    applyDisplays()
+                    scheduleSave()
+                })
+                document.getElementById('fireflySpeedSelect').addEventListener('change', function () {
+                    currentConfig.firefly_speed = fireflyLevel(this.value, DEFAULT_CONFIG.firefly_speed)
+                    applyDisplays()
+                    scheduleSave()
                 })
 
                 // 座右铭输入

@@ -239,6 +239,12 @@ body {
     z-index: 1000;
     width: 540px;
     max-width: 92vw;
+    /* 应用窗口只有半屏高，设置项比视口高时靠内部滚动兜底，
+       否则垂直居中会把顶部关闭按钮挤出屏幕。
+       这里是 content-box：max-height 不含 24px 下内边距和 2px 边框，
+       所以按 48px 预留，实际最多占满视口再留 8px 上下余量 */
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
     font-size: 14px;
 }
 .settings-modal.visible { display: block; }
@@ -507,6 +513,33 @@ body {
     background: var(--check-disabled-bg);
     border-color: var(--modal-border);
     cursor: not-allowed;
+}
+
+/* === 萤火虫数量 / 速度 === */
+/* 只在「显示」里勾上萤火虫时才出现，避免设置面板长期多占一行 */
+.firefly-section {
+    display: none;
+}
+.firefly-section.visible {
+    display: block;
+}
+.firefly-options {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+.firefly-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.firefly-field-label {
+    color: var(--modal-label);
+    font-size: 13px;
+}
+.firefly-options .settings-select {
+    min-width: 88px;
 }
 
 /* === 座右铭输入 === */
