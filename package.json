@@ -1,6 +1,6 @@
 {
   "name": "flip-clock-app",
-  "version": "1.0.22",
+  "version": "1.0.34",
   "description": "A minimalist, open-source desktop flip clock built with Tauri",
   "bin": {
     "flip-clock": "bin/flip-clock.js"
