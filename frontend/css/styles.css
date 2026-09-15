@@ -907,6 +907,97 @@ body {
     background-color: #2db24e;
 }
 
+/* 弹窗内的下载进度行 */
+.update-progress-row {
+    margin: 0 0 20px 0;
+}
+
+.update-progress-label {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--modal-muted);
+    text-align: right;
+}
+
+/* === 底部后台更新进度条 === */
+/* 静默更新时贴在窗口底部；层级低于所有弹窗（999+），不遮挡时钟交互 */
+.update-progress {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 800;
+    padding: 6px 12px 8px;
+    background-color: rgba(20, 20, 20, 0.86);
+    border-top: 1px solid var(--modal-border);
+    cursor: pointer;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.update-progress[hidden] {
+    display: none;
+}
+
+.update-progress-track {
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.14);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.update-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #5ac8fa, #007aff);
+    transition: width 0.25s ease;
+}
+
+.update-progress-text {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: var(--modal-muted);
+    text-align: center;
+}
+
+/* 安装阶段：进度已满，用呼吸效果表示仍在进行 */
+.update-progress.is-done .update-progress-fill {
+    animation: update-pulse 1.4s ease-in-out infinite;
+}
+
+/* 服务端未返回 Content-Length 时的滚动条，避免看起来卡在 0% */
+.update-progress.is-indeterminate .update-progress-fill {
+    width: 100%;
+    background: linear-gradient(90deg, transparent, #5ac8fa, #007aff, transparent);
+    background-size: 280px 100%;
+    animation: update-indeterminate 1.2s linear infinite;
+}
+
+@keyframes update-indeterminate {
+    from { background-position: -280px 0; }
+    to   { background-position: 280px 0; }
+}
+
+/* 更新已就绪：转为绿色，提示重启后生效 */
+.update-progress.is-ready .update-progress-fill {
+    background: linear-gradient(90deg, #34c759, #28a745);
+}
+
+.update-progress.is-ready .update-progress-text {
+    color: #7ee2a0;
+}
+
+/* 更新失败：转为红色 */
+.update-progress.is-error .update-progress-fill {
+    background: linear-gradient(90deg, #ff6b6b, #e03131);
+}
+
+.update-progress.is-error .update-progress-text {
+    color: #ff9d9d;
+}
+
 /* === 萤火虫背景 === */
 /* 萤火虫画布铺满窗口、置于时钟内容之下，不拦截任何鼠标事件 */
 .fireflies-canvas {

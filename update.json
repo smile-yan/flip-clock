@@ -1,23 +1,23 @@
 {
-  "version": "{{VERSION}}",
+  "version": "1.0.23",
   "notes": "Bug fixes and improvements",
-  "pub_date": "{{DATE}}",
+  "pub_date": "2026-09-14T00:00:00Z",
   "platforms": {
-    "windows-x86_64": {
-      "signature": "",
-      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-windows-x86_64.msi"
-    },
     "darwin-aarch64": {
-      "signature": "",
-      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-macos-arm64.dmg"
+      "signature": "<contents of flip-clock-v1.0.23-macos-arm64.app.tar.gz.sig>",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v1.0.23/flip-clock-v1.0.23-macos-arm64.app.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "",
-      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-macos-x86_64.dmg"
+      "signature": "<contents of flip-clock-v1.0.23-macos-x86_64.app.tar.gz.sig>",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v1.0.23/flip-clock-v1.0.23-macos-x86_64.app.tar.gz"
+    },
+    "windows-x86_64": {
+      "signature": "<contents of flip-clock-v1.0.23-windows-x86_64-setup.exe.sig>",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v1.0.23/flip-clock-v1.0.23-windows-x86_64-setup.exe"
     },
     "linux-x86_64": {
-      "signature": "",
-      "url": "https://github.com/smile-yan/flip-clock/releases/download/v{{VERSION}}/flip-clock-{{VERSION}}-linux-amd64.deb"
+      "signature": "<contents of flip-clock-v1.0.23-linux-x86_64.AppImage.tar.gz.sig>",
+      "url": "https://github.com/smile-yan/flip-clock/releases/download/v1.0.23/flip-clock-v1.0.23-linux-x86_64.AppImage.tar.gz"
     }
   }
 }

@@ -12,6 +12,22 @@ echo "Building flip-clock"
 echo "========================================"
 echo ""
 
+# `bundle.createUpdaterArtifacts` is enabled, so `tauri build` signs the updater
+# payloads and refuses to run without a key. Fall back to the locally generated
+# keypair so a plain `./scripts/build.sh` still works; CI passes the key as a
+# secret instead. Override by exporting TAURI_SIGNING_PRIVATE_KEY yourself.
+if [[ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]]; then
+    LOCAL_KEY="${HOME}/.tauri/flip-clock.key"
+    if [[ -f "$LOCAL_KEY" ]]; then
+        export TAURI_SIGNING_PRIVATE_KEY="$LOCAL_KEY"
+        echo "Using signing key: $LOCAL_KEY"
+    else
+        echo "Warning: no TAURI_SIGNING_PRIVATE_KEY set and $LOCAL_KEY not found." >&2
+        echo "         The build will fail while signing updater artifacts." >&2
+        echo "         Generate one with: cargo tauri signer generate -w ~/.tauri/flip-clock.key" >&2
+    fi
+fi
+
 # Build with Tauri
 echo "Step 1: Building with Tauri..."
 cd "$PROJECT_DIR/src-tauri"

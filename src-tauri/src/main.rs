@@ -159,6 +159,31 @@ fn save_settings(payload: HashMap<String, serde_json::Value>) -> Result<(), Stri
     save(&cfg)
 }
 
+/// Relaunch the app so a freshly installed update takes effect.
+///
+/// The restart is deferred to a detached thread so the IPC response reaches the
+/// frontend first — `AppHandle::restart` does not return, so calling it inline
+/// would leave the caller's promise forever pending. Saving happens here rather
+/// than in the `CloseRequested` handler because a restart never fires that event.
+#[tauri::command]
+fn restart_app<R: Runtime>(app: tauri::AppHandle<R>) -> Result<(), String> {
+    log::info!("Restart requested by frontend");
+
+    if let Ok(cfg) = load() {
+        if let Err(e) = save(&cfg) {
+            log::error!("Failed to save config before restart: {}", e);
+        }
+    }
+
+    std::thread::spawn(move || {
+        // Give the webview a moment to render the "restarting" state.
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        app.restart();
+    });
+
+    Ok(())
+}
+
 #[tauri::command]
 fn toggle_fullscreen(window: tauri::Window) -> Result<(), String> {
     let is_fullscreen = window.is_fullscreen().map_err(|e| e.to_string())?;
@@ -286,7 +311,8 @@ fn main() {
             get_available_styles,
             get_available_time_formats,
             get_release_url,
-            get_app_version
+            get_app_version,
+            restart_app
         ])
         .setup(|app| {
             log::info!("App setup complete");
