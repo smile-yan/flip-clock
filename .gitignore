@@ -24,3 +24,7 @@ src-tauri/target/
 
 # npm packaging artifacts
 /npm-packages/
+
+# Python bytecode (scripts/*.py)
+__pycache__/
+*.pyc

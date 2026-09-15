@@ -107,6 +107,34 @@ function setState(patch) {
     renderModal();
 }
 
+// Download progress events arrive far faster than the UI can usefully show them
+// (and the modal rebuild is not free), which would stutter the clock. Progress
+// bytes are accumulated immediately; the repaint is coalesced to ~10fps.
+const PROGRESS_RENDER_INTERVAL_MS = 100;
+let lastProgressRenderAt = 0;
+let progressRenderTimer = null;
+
+function setProgressState(patch) {
+    Object.assign(state, patch);
+
+    const now = Date.now();
+    const elapsed = now - lastProgressRenderAt;
+    if (elapsed >= PROGRESS_RENDER_INTERVAL_MS) {
+        lastProgressRenderAt = now;
+        renderProgressBar();
+        renderModal();
+        return;
+    }
+
+    if (progressRenderTimer) return;
+    progressRenderTimer = setTimeout(() => {
+        progressRenderTimer = null;
+        lastProgressRenderAt = Date.now();
+        renderProgressBar();
+        renderModal();
+    }, PROGRESS_RENDER_INTERVAL_MS - elapsed);
+}
+
 function renderProgressBar() {
     initProgressBar();
 
@@ -209,7 +237,8 @@ function renderModal() {
             primaryBtn.textContent = '后台继续';
             primaryBtn.disabled = false;
             primaryBtn.className = 'btn btn-primary';
-            laterBtn.textContent = '关闭';
+            // A single dismiss action — both buttons would do the same thing here.
+            laterBtn.style.display = 'none';
             break;
         }
 
@@ -295,6 +324,19 @@ function closeUpdateModal() {
     if (updateModal) updateModal.style.display = 'none';
 }
 
+// Release the previous check's Rust-side resource so repeated "检查更新" clicks
+// don't accumulate them. Skipped while a download is in flight, since the bytes
+// live behind that resource until install() consumes them.
+function disposePendingUpdate() {
+    if (!pendingUpdate || activeDownload) return;
+
+    const stale = pendingUpdate;
+    pendingUpdate = null;
+    if (typeof stale.close === 'function') {
+        stale.close().catch((err) => console.warn('Failed to close update resource:', err));
+    }
+}
+
 // The secondary button doubles as cancel / close / confirm depending on state.
 function onLaterClick() {
     switch (state.status) {
@@ -362,16 +404,17 @@ async function checkForUpdates() {
         await waitForMinChecking(startedAt);
 
         if (update) {
+            disposePendingUpdate();
             pendingUpdate = update;
             setState({ status: 'available', version: update.version });
         } else {
-            pendingUpdate = null;
+            disposePendingUpdate();
             setState({ status: 'uptodate' });
         }
     } catch (error) {
         await waitForMinChecking(startedAt);
         console.error('Check update error:', error);
-        pendingUpdate = null;
+        disposePendingUpdate();
         setState({ status: 'error', error });
     }
 }
@@ -426,10 +469,10 @@ async function runDownload(update) {
         await update.download((event) => {
             if (!event || !event.event) return;
             if (event.event === 'Started') {
-                setState({ total: (event.data && event.data.contentLength) || 0 });
+                setProgressState({ total: (event.data && event.data.contentLength) || 0 });
             } else if (event.event === 'Progress') {
                 if (!event.data) return;
-                setState({ downloaded: state.downloaded + event.data.chunkLength });
+                setProgressState({ downloaded: state.downloaded + event.data.chunkLength });
             }
             // 'Finished' needs no handling: the awaited promise resolves next.
         });
