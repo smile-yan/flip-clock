@@ -8,7 +8,8 @@ in order — each step assumes the previous one has finished.
 - [ ] `git status` is clean on `main`
 - [ ] Local `main` is in sync with `origin/main` (`git fetch origin && git status`)
 - [ ] All open PRs are merged (no draft PRs blocking the tag)
-- [ ] Updater signing secrets are configured (see "Updater signing keys" below)
+- [ ] Updater signing secrets are configured (see "Updater signing keys" below;
+      the `check-signing-env` job enforces this before any build starts)
 - [ ] Decide the version bump:
   - **patch** (`1.0.x` → `1.0.x+1`): bugfixes, internal cleanup, no user-visible
     features
@@ -25,7 +26,7 @@ whose public half is baked into `src-tauri/tauri.conf.json`
 
 | Secret | Value |
 | --- | --- |
-| `TAURI_SIGNING_PRIVATE_KEY` | full **contents** of the minisign private key file (not a path) |
+| `TAURI_SIGNING_PRIVATE_KEY` | full **contents** of the secret key file `~/.tauri/flip-clock.key` — not a path, and not its `.key.pub` sibling |
 | `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | the password chosen when the key was generated |
 
 The local keypair lives at `~/.tauri/flip-clock.key` (+ `.key.pub`). To load the
@@ -39,9 +40,23 @@ gh secret set TAURI_SIGNING_PRIVATE_KEY_PASSWORD   # prompts for the value
 Verify the stored key matches the configured pubkey before tagging:
 
 ```bash
-diff <(cat ~/.tauri/flip-clock.key.pub) \
-     <(python3 -c "import json,base64;print(base64.b64decode(json.load(open('src-tauri/tauri.conf.json'))['plugins']['updater']['pubkey']).decode(),end='')") \
+# The .pub file and plugins.updater.pubkey hold the same base64-boxed string
+# (`tauri signer generate` writes that form to both), so compare them directly.
+[ "$(cat ~/.tauri/flip-clock.key.pub)" = \
+  "$(python3 -c "import json;print(json.load(open('src-tauri/tauri.conf.json'))['plugins']['updater']['pubkey'],end='')")" ] \
   && echo "keypair matches tauri.conf.json"
+```
+
+The release workflow gates on this automatically: its first job,
+`check-signing-env`, runs before the build matrix and fails in seconds if either
+secret is missing or malformed. It also re-checks `plugins.updater.pubkey` and
+`bundle.createUpdaterArtifacts`, and rejects a path or the public half where the
+key contents belong. The same script runs locally against the real keypair:
+
+```bash
+TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/flip-clock.key)" \
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD='<password>' \
+  scripts/check-signing-env.sh
 ```
 
 If the private key is lost, generate a new pair and update **both** the secret and
@@ -77,6 +92,7 @@ cargo check --manifest-path src-tauri/Cargo.toml   # confirms the build picks it
 - [ ] `node --check frontend/clock.js` clean
 - [ ] `node --check frontend/js/update.js` clean
 - [ ] `python3 -m py_compile scripts/render-update-json.py` clean
+- [ ] `bash -n scripts/check-signing-env.sh` clean
 - [ ] `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml')); yaml.safe_load(open('.github/workflows/ci.yml'))"` clean
 - [ ] Manifest renderer still works against a fixture (catches suffix drift
       between `PLATFORM_ASSETS` and the workflow's rename step):

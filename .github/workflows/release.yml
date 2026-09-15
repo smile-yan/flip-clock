@@ -15,6 +15,27 @@ env:
   NODE_VERSION: '24'
 
 jobs:
+  # First fast-fail gate: the build matrix signs every updater payload, but
+  # `tauri build` only touches the signing key at bundle time — so a missing or
+  # malformed secret would otherwise surface at the END of a full multi-platform
+  # build. Checking it here turns that into a few seconds.
+  #
+  # The check has to be a step, not a job-level `if`: the `secrets` context is
+  # not available in job conditions, only in steps.
+  check-signing-env:
+    name: Check signing environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate updater signing secrets
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: bash scripts/check-signing-env.sh
+
   # Fast-fail gate: validate deployment credentials and SSH connectivity BEFORE
   # the multi-platform build matrix runs. A missing/misconfigured credential
   # should fail in seconds, not after a long build.
@@ -43,7 +64,9 @@ jobs:
 
   build:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }}
-    needs: check-deploy-env
+    needs:
+      - check-signing-env
+      - check-deploy-env
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
