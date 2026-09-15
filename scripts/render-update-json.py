@@ -29,14 +29,17 @@ import urllib.parse
 #
 # macOS and Windows are backed by the updater payloads the bundler generates
 # (`createUpdaterArtifacts`): a `.app.tar.gz` and the NSIS setup executable.
-# Linux is backed by the AppImage tarball rather than the .deb/.rpm, because
+# Linux is backed by the AppImage itself rather than the .deb/.rpm, because
 # replacing an AppImage needs no privileges — the deb/rpm paths in the plugin
 # shell out to dpkg/rpm through pkexec or sudo, which is not silent.
 PLATFORM_ASSETS = {
     "darwin-aarch64": "-macos-arm64.app.tar.gz",
     "darwin-x86_64": "-macos-x86_64.app.tar.gz",
     "windows-x86_64": "-windows-x86_64-setup.exe",
-    "linux-x86_64": "-linux-x86_64.AppImage.tar.gz",
+    # Not `.AppImage.tar.gz`: the bundler signs the AppImage in place and emits
+    # no tarball, and `tauri-plugin-updater` installs a non-gzip payload by
+    # writing it straight over the running AppImage.
+    "linux-x86_64": "-linux-x86_64.AppImage",
 }
 
 

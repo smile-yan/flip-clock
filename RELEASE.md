@@ -102,7 +102,7 @@ mkdir -p /tmp/upd/macos /tmp/upd/nsis /tmp/upd/appimage
 for f in macos/flip-clock-v1.0.23-macos-arm64.app.tar.gz \
          macos/flip-clock-v1.0.23-macos-x86_64.app.tar.gz \
          nsis/flip-clock-v1.0.23-windows-x86_64-setup.exe \
-         appimage/flip-clock-v1.0.23-linux-x86_64.AppImage.tar.gz; do
+         appimage/flip-clock-v1.0.23-linux-x86_64.AppImage; do
   echo payload > "/tmp/upd/$f"; echo "sig-for-$(basename "$f")" > "/tmp/upd/$f.sig"
 done
 python3 scripts/render-update-json.py --tag v1.0.23 \
@@ -125,13 +125,17 @@ grep -c '"url"' /tmp/upd/update.json   # expect 4
 
 - [ ] Open https://github.com/smile-yan/flip-clock/actions/workflows/release.yml
 - [ ] Click **Run workflow** → branch `main`
-- [ ] Wait for all four jobs: `build` (linux / windows / macOS×2) +
-      `package-macos` + `release`
+- [ ] Wait for the jobs that are not tag-gated: `check-signing-env`,
+      `check-deploy-env`, `build` (linux / windows / macOS×2) and `package-macos`
 - [ ] Inspect the macOS `package-macos` step output — `lipo -info` should report
       `arm64 x86_64` for the universal binary
-- [ ] The `release` job will create a **draft** GitHub Release because
-      `softprops/action-gh-release` runs unconditionally — **delete the draft
-      release after the dry-run** so the real tag isn't shadowed
+
+> `release`, `publish-npm` and `deploy-web` are each gated on
+> `startsWith(github.ref, 'refs/tags/')`, so a dry-run skips them: it cannot
+> catch a broken `update.json` render, an asset the manifest points at but the
+> workflow does not upload, or a version npm already has. Cover the renderer
+> with the local fixture in step 2, and treat those three jobs as exercised for
+> the first time on the real tag push.
 
 ## 5. Tag
 
@@ -160,7 +164,8 @@ draft release.
   - `flip-clock-v<NEW>-macos-universal.dmg`
   - `flip-clock-v<NEW>-macos-arm64.app.tar.gz` / `-macos-x86_64.app.tar.gz`
     (the updater payloads the in-app updater downloads)
-  - `flip-clock-v<NEW>-linux-x86_64.AppImage.tar.gz`
+  - `flip-clock-v<NEW>-linux-x86_64.AppImage` (also the Linux updater payload —
+    the bundler signs the AppImage in place, so there is no `.AppImage.tar.gz`)
   - `update.json` (rendered with the real version, date, and per-platform signatures)
 
 ## 7. Verify the artifacts

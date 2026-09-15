@@ -15,6 +15,39 @@ env:
   NODE_VERSION: '24'
 
 jobs:
+  # The app's own version — what the updater compares against as
+  # `current_version`, and what the About dialog shows — comes from
+  # tauri.conf.json, NOT from the git tag: the tag only drives the generated
+  # asset file names. Once the two drift apart, every installed build reports
+  # the old version, so the updater offers the same release forever. Catching it
+  # here costs seconds; catching it after a release costs a version bump.
+  check-app-version:
+    name: Check tag matches app version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Compare tag with tauri.conf.json version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(python3 -c "import json;print(json.load(open('src-tauri/tauri.conf.json'))['version'])")
+
+          # Only a tag push makes a claim about the version; on a branch or a
+          # workflow_dispatch dry-run the config is free to lag.
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "::notice::not a tag run — tauri.conf.json declares ${version} (informational)"
+            exit 0
+          fi
+
+          tag="${GITHUB_REF_NAME#v}"
+          if [[ "$tag" != "$version" ]]; then
+            echo "::error::tag v${tag} does not match the app version ${version} in src-tauri/tauri.conf.json (and Cargo.toml) — bump both, then re-tag. See RELEASE.md step 1."
+            exit 1
+          fi
+          echo "tag v${tag} matches the app version"
+
   # First fast-fail gate: the build matrix signs every updater payload, but
   # `tauri build` only touches the signing key at bundle time — so a missing or
   # malformed secret would otherwise surface at the END of a full multi-platform
@@ -65,6 +98,7 @@ jobs:
   build:
     name: Build ${{ matrix.platform }}-${{ matrix.arch }}
     needs:
+      - check-app-version
       - check-signing-env
       - check-deploy-env
     runs-on: ${{ matrix.os }}
@@ -367,6 +401,12 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
+      # The update.json renderer lives in this repo, so this job needs the
+      # sources: it downloads build artifacts, not a checkout, and without this
+      # step `scripts/render-update-json.py` does not exist on the runner.
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Download all artifacts
         uses: actions/download-artifact@v8
         with:
@@ -404,7 +444,7 @@ jobs:
             release-assets/rpm/*.rpm
             release-assets/msi/*.msi
             release-assets/macos/*.app.tar.gz
-            release-assets/appimage/*.AppImage.tar.gz
+            release-assets/appimage/*.AppImage
             release-assets/*.dmg
 
   publish-npm:
@@ -459,7 +499,17 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
           for pkg in npm-packages/flip-clock-app-*; do
+            name=$(node -p "require('./$pkg/package.json').name")
+            version=$(node -p "require('./$pkg/package.json').version")
+            # Published versions are immutable, so a second run for the same tag
+            # (a re-run, or a partially published one) would otherwise abort the
+            # whole job on the first package that already exists.
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "skip $name@$version (already on the registry)"
+              continue
+            fi
             npm publish "./$pkg" --access public
           done
 
@@ -467,6 +517,13 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          set -euo pipefail
+          name=$(node -p "require('./npm-packages/flip-clock-app/package.json').name")
+          version=$(node -p "require('./npm-packages/flip-clock-app/package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "skip $name@$version (already on the registry)"
+            exit 0
+          fi
           npm publish ./npm-packages/flip-clock-app --access public
 
 
