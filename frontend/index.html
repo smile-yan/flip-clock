@@ -535,9 +535,9 @@
                     githubLink.addEventListener('click', function (e) {
                         e.preventDefault()
                         if (window.__TAURI__ && window.__TAURI__.shell) {
-                            window.__TAURI__.shell.open('https://github.com/smile-yan/easy-flip-clock')
+                            window.__TAURI__.shell.open('https://github.com/smile-yan/flip-clock')
                         } else if (window.wails && window.wails.BrowserOpenURL) {
-                            window.wails.BrowserOpenURL('https://github.com/smile-yan/easy-flip-clock')
+                            window.wails.BrowserOpenURL('https://github.com/smile-yan/flip-clock')
                         }
                     })
                 }
