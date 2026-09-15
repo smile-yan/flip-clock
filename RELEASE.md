@@ -71,7 +71,11 @@ they keep working, they just have to update manually one last time.
 
 ## 1. Bump the version
 
-Three places to update — `Cargo.lock` is `.gitignore`d so just keep these two in sync:
+Two places to update — `Cargo.lock` is `.gitignore`d, and `package.json` is
+rewritten from the tag by the release workflow, so neither needs a manual bump.
+Both of these do, and they must be committed **before** the tag is pushed: the
+`check-app-version` job fails the run within seconds when the tag and the config
+disagree.
 
 - [ ] `src-tauri/tauri.conf.json` → `"version": "<NEW>"`
 - [ ] `src-tauri/Cargo.toml` → `version = "<NEW>"`
@@ -139,7 +143,11 @@ grep -c '"url"' /tmp/upd/update.json   # expect 4
 
 ## 5. Tag
 
-- [ ] `git tag -a v<NEW> -m "Release v<NEW>"`
+- [ ] `git tag -a v<NEW> -m "Release v<NEW>"` — `v<NEW>` must equal the version
+      bumped in step 1. The tag only renames the generated assets; the version
+      the app reports (About dialog, and the value the updater compares against)
+      comes from `tauri.conf.json`, so a mismatch means every installed build
+      keeps being offered the same release.
 - [ ] `git push origin v<NEW>` — this triggers the real `Release` workflow
 
 The push MUST be a **tag push** (`refs/tags/v*`); only then does
