@@ -128,6 +128,8 @@ flip-clock/
 │   └── src/
 │       ├── main.rs         # Entry point + Tauri commands
 │       └── config.rs       # Config management
+├── tests/
+│   └── fireflies.test.mjs  # Frontend tests (node --test, no dependencies)
 └── frontend/
     ├── index.html          # Main HTML
     ├── styles.css          # Pure CSS (themes + flip animation)
@@ -162,7 +164,7 @@ Runs on every push to `main`/`master` and on pull requests:
 | Job | Description |
 |-----|-------------|
 | `lint` | Code formatting check and Clippy linting |
-| `test` | Unit tests via `cargo test` |
+| `test` | Unit tests via `cargo test` and `node --test` |
 | `build-check` | Cross-platform build verification (Linux, Windows, macOS) |
 
 #### Release Workflow (`.github/workflows/release.yml`)
@@ -187,6 +189,12 @@ cargo tauri build
 
 # Or use the build script (includes DMG icon fix)
 ./scripts/build.sh
+
+# Rust unit tests
+cargo test --manifest-path src-tauri/Cargo.toml
+
+# Frontend tests (Node's built-in runner, no dependencies)
+node --test "tests/**/*.test.mjs"
 ```
 
 ### Creating a Release

@@ -46,6 +46,10 @@
         var flies = [];
         var last = 0;
         var running = false;
+        // 一次运行 = 一条 rAF 链。代际号让「上一轮还挂在队列里的帧」失效：
+        // 否则关掉再立刻打开时，旧帧会看到 running 又变成 true 而继续排队，
+        // 于是两条链同时画，帧率翻倍。
+        var generation = 0;
 
         // === 平滑伪噪声：3 组随机正弦叠加，输出约 [-1, 1]，用于转向 ===
         function makeWobble() {
@@ -193,12 +197,17 @@
             syncCount();
         }
 
-        function frame(now) {
+        function frame(now, gen) {
+            // 必须先看 running：requestAnimationFrame 是「先排队、后执行」，
+            // stop() 里清一次画布挡不住已经排队的那一帧，不在这里退出的话
+            // 每帧都会重新排队，关掉开关画面也不会消失。
+            // gen 再挡住「上一轮遗留的帧」重新接上新一轮的链。
+            if (!running || gen !== generation) return;
             if (document.hidden) {
                 running = false;
                 return;
             }
-            requestAnimationFrame(frame);
+            requestAnimationFrame(function (t) { frame(t, gen); });
             var dt = Math.min((now - last) / 1000, 0.05) || 0.016;
             last = now;
 
@@ -216,18 +225,22 @@
 
         return {
             start: function () {
-                resize();
                 if (running) return;
+                resize();
                 running = true;
+                var gen = ++generation;
                 last = performance.now();
-                requestAnimationFrame(frame);
+                requestAnimationFrame(function (t) { frame(t, gen); });
             },
             stop: function () {
                 running = false;
+                generation++;
                 ctx.clearRect(0, 0, W, H);
             },
             // 数量档位变化：按新档位增删萤火虫，已在飞的不受影响
-            syncCount: syncCount
+            syncCount: syncCount,
+            // 窗口尺寸变化：只更新画布，是否继续跑由 running 决定
+            resize: resize
         };
     }
 
@@ -282,8 +295,9 @@
         };
 
         window.addEventListener('resize', function () {
-            // 画布尺寸跟随窗口；引擎未创建时无需处理
-            if (engine) engine.start();
+            // 画布尺寸跟随窗口。这里只能同步尺寸，不能调 start()：
+            // 关掉萤火虫后引擎仍在（只是没在跑），一改窗口大小就会被重新拉起来。
+            if (engine) engine.resize();
         });
         document.addEventListener('visibilitychange', sync);
         // 主题切换时动态启停（applyTheme 设置 data-theme 后这里会收到通知）
